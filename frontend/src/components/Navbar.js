@@ -29,6 +29,9 @@ const Navbar = () => {
                 <Link to="/qr-scan" className="nav-item">
                     Scan borrow/return/export
                 </Link>
+                <Link to="/history-management" className="nav-item">
+                    History
+                </Link>
                 <Link to="/system-management" className="nav-item">
                     System Management
                 </Link>

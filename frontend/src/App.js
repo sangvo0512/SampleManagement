@@ -12,6 +12,8 @@ import DepartmentManagementPage from './components/DepartmentManagementPage';
 import OperationCodeManagement from './components/OperationCodeManagementPage';
 import AccessManagementPage from './components/AccessManagementPage';
 import GroupManagementPage from './components/GroupManagementPage';
+import WarehouseManagementPage from './components/WarehouseManagementPage';
+import HistoryManagementPage from './components/HistoryPage';
 const LayoutWithNavbar = ({ children }) => {
   const location = useLocation();
   const showNavbar = location.pathname !== "/login";
@@ -37,6 +39,8 @@ function App() {
         <Route path="/operation-code-management" element={<LayoutWithNavbar><OperationCodeManagement /></LayoutWithNavbar>} />
         <Route path="/access-management" element={<LayoutWithNavbar><AccessManagementPage /></LayoutWithNavbar>} />
         <Route path="/group-management" element={<LayoutWithNavbar><GroupManagementPage /></LayoutWithNavbar>} />
+        <Route path="/warehouse-management" element={<LayoutWithNavbar><WarehouseManagementPage /></LayoutWithNavbar>} />
+        <Route path="/history-management" element={<LayoutWithNavbar><HistoryManagementPage /></LayoutWithNavbar>} />
         <Route path="*" element={<LoginPage />} />
       </Routes>
     </Router>

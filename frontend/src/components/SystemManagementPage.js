@@ -37,7 +37,7 @@ const SystemManagementPage = () => {
                 <div className="card">
                     <Warehouse className="card-icon" />
                     <h2 className="card-title">Warehouse</h2>
-                    <Link to="/access-management"></Link>
+                    <Link to="/warehouse-management"></Link>
                     <button>
                         <Link to="/warehouse-management">Access</Link>
                     </button>

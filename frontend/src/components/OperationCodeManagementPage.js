@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { Table, Button, Modal, Input, Form, message } from "antd";
+import { Table, Button, Modal, Input, Form, message, Popconfirm } from "antd";
 import { useAuth } from "../context/AuthContext";
 import "../styles/OperationCodeManagementPage.css"
 
@@ -73,7 +73,15 @@ const OperationCodeManagementPage = () => {
             render: (_, record) => (
                 <>
                     <Button onClick={() => handleEdit(record)} type="primary" style={{ marginRight: 8 }}>Edit</Button>
-                    <Button onClick={() => handleDelete(record.ReasonID)} type="danger">Delete</Button>
+                    <Popconfirm
+                        title="Are you sure to delete this operation code?"
+                        onConfirm={() => handleDelete(record.ReasonID)}
+                        okText="Yes"
+                        cancelText="No"
+                    >
+                        <Button type="danger">Delete</Button>
+                    </Popconfirm>
+
                 </>
             ),
         }] : [])

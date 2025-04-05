@@ -1,14 +1,13 @@
-/* Container tổng thể cho trang User Management */
-.user-management {
+/* Tổng thể container của trang */
+.warehouse-management {
     padding: 2rem;
     background-color: #fffcf7;
-    /* Nền trang */
     min-height: 100vh;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-/* Tiêu đề trang */
-.user-management h3 {
+/* Tiêu đề */
+.warehouse-management h2 {
     font-size: 1.8rem;
     font-weight: 600;
     color: #333;
@@ -16,34 +15,36 @@
     text-align: center;
 }
 
-/* Nút Thêm Người Dùng */
-.add-user-button {
+/* Nút "Add Warehouse" */
+.add-warehouse-button {
     display: inline-flex;
-    /* Sử dụng inline-flex */
     align-items: center;
-    /* Căn giữa theo chiều dọc */
     justify-content: center;
-    /* Căn giữa theo chiều ngang */
     font-size: 1rem;
     padding: 0.75rem 1.5rem;
     border-radius: 4px;
     background-color: #64cacf;
-    /* Nền nút màu #64cacf */
     color: #fff;
-    /* Chữ màu trắng */
     border: none;
     cursor: pointer;
     transition: background-color 0.3s ease;
-    margin-bottom: 1.5rem;
     text-transform: uppercase;
+    margin-bottom: 1.5rem;
 }
 
-.add-user-button:hover {
+.add-warehouse-button:hover {
     background-color: #4ca7c3;
 }
 
-/* Bảng dữ liệu */
-.user-management-table {
+/* Ô tìm kiếm */
+.warehouse-search {
+    float: right;
+    margin-bottom: 1.5rem;
+    width: 300px;
+}
+
+/* Bảng warehouse */
+.warehouse-table {
     background-color: #fff;
     border-radius: 8px;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
@@ -51,49 +52,49 @@
 }
 
 /* Header của bảng */
-.user-management .ant-table-thead>tr>th {
+.warehouse-management .ant-table-thead>tr>th {
     background-color: #e9ecef;
     color: #333;
     font-weight: 600;
 }
 
-/* Hiệu ứng hover cho dòng bảng */
-.user-management .ant-table-tbody>tr:hover {
+/* Hover dòng trong bảng */
+.warehouse-management .ant-table-tbody>tr:hover {
     background-color: #f1f1f1;
 }
 
-/* Tuỳ chỉnh Modal: bo tròn góc */
+/* Modal bo tròn */
 .modal-custom .ant-modal-content {
     border-radius: 8px;
 }
 
-/* Label của form */
-.user-management .ant-form-item-label>label {
+/* Label form */
+.warehouse-management .ant-form-item-label>label {
     font-weight: 500;
     color: #333;
 }
 
 /* Nút primary (Edit) */
-.user-management .ant-btn-primary {
+.warehouse-management .ant-btn-primary {
     background-color: #64cacf;
     border-color: #64cacf;
     color: #fff;
     text-align: center;
 }
 
-.user-management .ant-btn-primary:hover {
+.warehouse-management .ant-btn-primary:hover {
     background-color: #4ca7c3;
     border-color: #4ca7c3;
 }
 
 /*Nút del*/
-.user-management .ant-btn-danger {
+.warehouse-management .ant-btn-danger {
     background-color: #e74c3c;
     border-color: #e74c3c;
     color: #fff;
 }
 
-.user-management .ant-btn-danger:hover {
+.warehouse-management .ant-btn-danger:hover {
     background-color: #c0392b;
     border-color: #c0392b;
 }

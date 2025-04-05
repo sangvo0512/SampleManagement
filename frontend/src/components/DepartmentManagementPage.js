@@ -1,7 +1,7 @@
 // src/components/DepartmentManagement.js
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { Table, Button, Modal, Input, Form } from "antd";
+import { Table, Button, Modal, Input, Form, Popconfirm } from "antd";
 import "../styles/DepartmentManagementPage.css";
 
 const DepartmentManagement = () => {
@@ -81,9 +81,18 @@ const DepartmentManagement = () => {
                     <Button onClick={() => handleEdit(record)} type="primary" style={{ marginRight: 8 }}>
                         Edit
                     </Button>
-                    <Button onClick={() => handleDelete(record.DepartmentID)} type="danger">
-                        Delete
-                    </Button>
+                    <Popconfirm
+                        title="Are you sure to delete this department?"
+                        onConfirm={() => handleDelete(record.DepartmentID)}
+                        okText="Yes"
+                        cancelText="No"
+                    >
+                        <Button type="danger">
+                            Delete
+                        </Button>
+
+                    </Popconfirm>
+
                 </>
             ),
         },

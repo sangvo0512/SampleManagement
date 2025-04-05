@@ -1,7 +1,7 @@
 // src/components/UserManagement.js
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { Select, Table, Button, Modal, Input, Form } from "antd";
+import { Select, Table, Button, Modal, Input, Form, Popconfirm } from "antd";
 import "../styles/UserManagementPage.css";  // Import file CSS
 
 const UserManagement = () => {
@@ -90,7 +90,15 @@ const UserManagement = () => {
             render: (_, record) => (
                 <>
                     <Button onClick={() => handleEdit(record)} type="primary" style={{ marginRight: 8 }}>Edit</Button>
-                    <Button onClick={() => handleDelete(record.UserID)} type="danger">Delete</Button>
+                    <Popconfirm
+                        title="Are you sure to delete this user?"
+                        onConfirm={() => handleDelete(record.UserID)}
+                        okText="Yes"
+                        cancelText="No"
+                    >
+                        <Button type="danger">Delete</Button>
+                    </Popconfirm>
+
                 </>
             ),
         },
@@ -99,10 +107,18 @@ const UserManagement = () => {
     return (
         <div className="user-management">
             <h3>User Management</h3>
-            <Button className="add-user-button" type="primary" onClick={handleAdd}>
-                Add
+            <Button
+                className="add-user-button"
+                type="primary"
+                onClick={handleAdd}>
+                Add User
             </Button>
-            <Table className="user-management-table" columns={columns} dataSource={users} loading={loading} rowKey="UserID" />
+            <Table
+                className="user-management-table"
+                columns={columns}
+                dataSource={users}
+                loading={loading}
+                rowKey="UserID" />
 
             <Modal
                 title={editingUser ? "Edit User" : "Add User"}
