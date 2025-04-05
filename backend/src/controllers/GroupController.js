@@ -25,7 +25,20 @@ class GroupController {
             res.status(500).json({ error: err.message });
         }
     }
-
+    // Cập nhật tên nhóm
+    static async updateGroup(req, res) {
+        try {
+            const { groupId } = req.params;
+            const { groupName } = req.body;
+            if (!groupName) {
+                return res.status(400).json({ error: "Tên nhóm không được để trống" });
+            }
+            await GroupModel.updateGroup(groupId, groupName);
+            res.json({ message: "Group updated successfully" });
+        } catch (err) {
+            res.status(500).json({ error: err.message });
+        }
+    }
     // Xóa nhóm
     static async deleteGroup(req, res) {
         try {

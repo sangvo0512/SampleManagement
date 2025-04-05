@@ -10,7 +10,8 @@ import UserManagementPage from './components/UserManagementPage';
 import DashboardPage from './components/DashboardPage';
 import DepartmentManagementPage from './components/DepartmentManagementPage';
 import OperationCodeManagement from './components/OperationCodeManagementPage';
-
+import AccessManagementPage from './components/AccessManagementPage';
+import GroupManagementPage from './components/GroupManagementPage';
 const LayoutWithNavbar = ({ children }) => {
   const location = useLocation();
   const showNavbar = location.pathname !== "/login";
@@ -34,6 +35,8 @@ function App() {
         <Route path="/users-management" element={<LayoutWithNavbar><UserManagementPage /></LayoutWithNavbar>} />
         <Route path="/department-management" element={<LayoutWithNavbar><DepartmentManagementPage /></LayoutWithNavbar>} />
         <Route path="/operation-code-management" element={<LayoutWithNavbar><OperationCodeManagement /></LayoutWithNavbar>} />
+        <Route path="/access-management" element={<LayoutWithNavbar><AccessManagementPage /></LayoutWithNavbar>} />
+        <Route path="/group-management" element={<LayoutWithNavbar><GroupManagementPage /></LayoutWithNavbar>} />
         <Route path="*" element={<LoginPage />} />
       </Routes>
     </Router>

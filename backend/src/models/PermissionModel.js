@@ -18,7 +18,12 @@ class PermissionModel {
             throw err;
         }
     }
-
+    static async getDisplayPermissions() {
+        const pool = await poolPromise;
+        // Lấy các quyền có tên bắt đầu bằng 'VIEW_'
+        const result = await pool.request().query("SELECT * FROM Permissions WHERE PermissionName LIKE 'VIEW_%'");
+        return result.recordset;
+    }
     // Thêm quyền cho user (chặn trùng lặp)
     static async addUserPermissions(userId, permissions) {
         try {

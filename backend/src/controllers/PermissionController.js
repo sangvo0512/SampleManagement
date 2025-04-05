@@ -25,7 +25,17 @@ class PermissionController {
             res.status(500).json({ error: err.message });
         }
     }
-
+    //Lấy quyền hiển thị bắt đầu bằng VIEW_ cho các quyền hiển thị
+    static async getDisplayPermissions(req, res) {
+        try {
+            const pool = await require("../config/db").poolPromise;
+            const result = await pool.request()
+                .query("SELECT * FROM Permissions WHERE PermissionName LIKE 'VIEW_%'");
+            res.json(result.recordset);
+        } catch (err) {
+            res.status(500).json({ error: err.message });
+        }
+    }
     // Xóa quyền
     static async deletePermission(req, res) {
         try {

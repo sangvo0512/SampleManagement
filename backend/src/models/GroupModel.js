@@ -24,6 +24,23 @@ class GroupModel {
             throw err;
         }
     }
+    // Lấy danh sách user thuộc nhóm
+    static async getUsersInGroup(groupId) {
+        try {
+            const pool = await poolPromise;
+            const result = await pool.request()
+                .input("GroupID", sql.Int, groupId)
+                .query(`
+                SELECT u.UserID, u.Username, u.FullName, u.Email
+                FROM UserGroups ug
+                JOIN Users u ON ug.UserID = u.UserID
+                WHERE ug.GroupID = @GroupID
+            `);
+            return result.recordset;
+        } catch (err) {
+            throw err;
+        }
+    }
 
     // Xóa nhóm (bao gồm xóa quyền và user trong nhóm)
     static async deleteGroup(groupId) {
@@ -47,7 +64,7 @@ class GroupModel {
                 .input("UserID", sql.Int, userId)
                 .input("GroupID", sql.Int, groupId)
                 .query("SELECT COUNT(*) AS count FROM UserGroups WHERE UserID = @UserID AND GroupID = @GroupID");
-
+            console.log("Check result:", checkResult.recordset);
             if (checkResult.recordset[0].count > 0) {
                 throw new Error("User đã thuộc nhóm này.");
             }
@@ -61,6 +78,18 @@ class GroupModel {
         }
     }
 
+    // Cập nhật tên nhóm
+    static async updateGroup(groupId, groupName) {
+        try {
+            const pool = await poolPromise;
+            await pool.request()
+                .input("GroupID", sql.Int, groupId)
+                .input("GroupName", sql.NVarChar, groupName)
+                .query("UPDATE Groups SET GroupName = @GroupName WHERE GroupID = @GroupID");
+        } catch (err) {
+            throw err;
+        }
+    }
     // Xóa user khỏi nhóm
     static async removeUserFromGroup(userId, groupId) {
         try {

@@ -4,11 +4,13 @@ const { checkPermission } = require("../middleware/authMiddleware");
 
 const router = express.Router();
 
-router.get("/groups", GroupController.getAllGroups);
-router.post("/groups", checkPermission("manage_groups"), GroupController.createGroup);
-router.delete("/groups/:groupId", checkPermission("manage_groups"), GroupController.deleteGroup);
-router.post("/user-groups", checkPermission("manage_groups"), GroupController.addUserToGroup);
-router.delete("/user-groups", checkPermission("manage_groups"), GroupController.removeUserFromGroup);
-router.get("/groups/:groupId", checkPermission("manage_groups"), GroupController.getUsersInGroup);
+router.get("/", GroupController.getAllGroups);
+router.post("/", GroupController.createGroup);
+// router.get("/search", GroupController.searchGroups); 
+router.put("/:groupId", GroupController.updateGroup);
+router.delete("/:groupId", GroupController.deleteGroup);
+router.post("/addUser", GroupController.addUserToGroup);
+router.post("/removeUser", GroupController.removeUserFromGroup);
+router.get("/:groupId/users", GroupController.getUsersInGroup);
 
 module.exports = router;
