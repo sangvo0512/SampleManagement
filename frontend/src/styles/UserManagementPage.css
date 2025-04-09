@@ -19,18 +19,13 @@
 /* Nút Thêm Người Dùng */
 .add-user-button {
     display: inline-flex;
-    /* Sử dụng inline-flex */
     align-items: center;
-    /* Căn giữa theo chiều dọc */
     justify-content: center;
-    /* Căn giữa theo chiều ngang */
     font-size: 1rem;
     padding: 0.75rem 1.5rem;
     border-radius: 4px;
     background-color: #64cacf;
-    /* Nền nút màu #64cacf */
     color: #fff;
-    /* Chữ màu trắng */
     border: none;
     cursor: pointer;
     transition: background-color 0.3s ease;
@@ -40,6 +35,13 @@
 
 .add-user-button:hover {
     background-color: #4ca7c3;
+}
+
+/* Ô tìm kiếm */
+.user-search {
+    float: right;
+    margin-bottom: 1.5rem;
+    width: 300px;
 }
 
 /* Bảng dữ liệu */

@@ -11,7 +11,7 @@ const UserManagement = () => {
     const [editingUser, setEditingUser] = useState(null);
     const [form] = Form.useForm();
     const [departments, setDepartments] = useState([]);
-
+    const [searchTerm, setSearchTerm] = useState("");
     useEffect(() => {
         fetchUsers();
         fetchDepartments();
@@ -77,7 +77,9 @@ const UserManagement = () => {
             console.error("Error saving user:", error);
         }
     };
-
+    const filteredUser = users.filter(us =>
+        us.Username.toLowerCase().includes(searchTerm.toLowerCase())
+    );
     const columns = [
         { title: "Username", dataIndex: "Username", key: "Username" },
         { title: "Full Name", dataIndex: "FullName", key: "FullName" },
@@ -113,12 +115,20 @@ const UserManagement = () => {
                 onClick={handleAdd}>
                 Add User
             </Button>
+            <Input
+                className="user-search"
+                placeholder="Search user by username"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{ width: 300, marginBottom: 16 }}
+            />
             <Table
                 className="user-management-table"
                 columns={columns}
-                dataSource={users}
+                dataSource={filteredUser}
                 loading={loading}
-                rowKey="UserID" />
+                rowKey="UserID"
+                bordered />
 
             <Modal
                 title={editingUser ? "Edit User" : "Add User"}
