@@ -1,81 +1,139 @@
 const PermissionModel = require("../models/PermissionModel");
 
-class PermissionController {
-    // Lấy danh sách tất cả quyền
-    static async getAllPermissions(req, res) {
+const PermissionController = {
+    async getAllPermissions(req, res) {
         try {
-            const permissions = await PermissionModel.getAllPermissions();
-            res.json(permissions);
+            const data = await PermissionModel.getAllPermissions();
+            res.json(data);
         } catch (err) {
-            res.status(500).json({ error: err.message });
+            console.error("Error fetching permissions:", err);
+            res.status(500).send("Internal Server Error");
         }
-    }
+    },
 
-    // Tạo quyền mới
-    static async createPermission(req, res) {
+    async getUserPermissions(req, res) {
         try {
-            const { permissionName } = req.body;
-            if (!permissionName) {
-                return res.status(400).json({ error: "Tên quyền không được để trống" });
+            const { userId } = req.params;
+            const data = await PermissionModel.getUserPermissions(userId);
+            res.json(data);
+        } catch (err) {
+            console.error("Error fetching user permissions:", err);
+            res.status(500).send("Internal Server Error");
+        }
+    },
+
+    async getGroupPermissions(req, res) {
+        try {
+            const { groupId } = req.params;
+            const data = await PermissionModel.getGroupPermissions(groupId);
+            res.json(data);
+        } catch (err) {
+            console.error("Error fetching group permissions:", err);
+            res.status(500).send("Internal Server Error");
+        }
+    },
+
+    async setUserPermissions(req, res) {
+        try {
+            const { userId, permissionIds } = req.body;
+            if (!userId || !Array.isArray(permissionIds)) {
+                return res.status(400).send("Invalid data");
             }
 
-            const newPermission = await PermissionModel.createPermission(permissionName);
-            res.status(201).json(newPermission);
+            await PermissionModel.setUserPermissions(userId, permissionIds);
+            res.sendStatus(204);
         } catch (err) {
-            res.status(500).json({ error: err.message });
+            console.error("Error setting user permissions:", err);
+            res.status(500).send("Internal Server Error");
         }
-    }
-    //Lấy quyền hiển thị bắt đầu bằng VIEW_ cho các quyền hiển thị
-    static async getDisplayPermissions(req, res) {
-        try {
-            const pool = await require("../config/db").poolPromise;
-            const result = await pool.request()
-                .query("SELECT * FROM Permissions WHERE PermissionName LIKE 'VIEW_%'");
-            res.json(result.recordset);
-        } catch (err) {
-            res.status(500).json({ error: err.message });
-        }
-    }
-    // Xóa quyền
-    static async deletePermission(req, res) {
-        try {
-            const { permissionId } = req.params;
-            await PermissionModel.deletePermission(permissionId);
-            res.json({ message: "Xóa quyền thành công" });
-        } catch (err) {
-            res.status(500).json({ error: err.message });
-        }
-    }
+    },
 
-    // Cấp quyền cho user
-    static async assignPermissionToUser(req, res) {
+    async setGroupPermissions(req, res) {
+        try {
+            const { groupId, permissionIds } = req.body;
+            if (!groupId || !Array.isArray(permissionIds)) {
+                return res.status(400).send("Invalid data");
+            }
+
+            await PermissionModel.setGroupPermissions(groupId, permissionIds);
+            res.sendStatus(204);
+        } catch (err) {
+            console.error("Error setting group permissions:", err);
+            res.status(500).send("Internal Server Error");
+        }
+    },
+    async removeUserPermission(req, res) {
         try {
             const { userId, permissionId } = req.body;
             if (!userId || !permissionId) {
-                return res.status(400).json({ error: "Thiếu userId hoặc permissionId" });
+                return res.status(400).send("Missing userId or permissionId");
             }
 
-            await PermissionModel.assignPermissionToUser(userId, permissionId);
-            res.json({ message: "Gán quyền cho user thành công" });
+            await PermissionModel.removeUserPermission(userId, permissionId);
+            res.sendStatus(204);
         } catch (err) {
-            res.status(500).json({ error: err.message });
+            console.error("Error removing user permission:", err);
+            res.status(500).send("Internal Server Error");
         }
-    }
+    },
 
-    // Thu hồi quyền của user
-    static async removePermissionFromUser(req, res) {
+    async removeGroupPermission(req, res) {
+        try {
+            const { groupId, permissionId } = req.body;
+            if (!groupId || !permissionId) {
+                return res.status(400).send("Missing groupId or permissionId");
+            }
+
+            await PermissionModel.removeGroupPermission(groupId, permissionId);
+            res.sendStatus(204);
+        } catch (err) {
+            console.error("Error removing group permission:", err);
+            res.status(500).send("Internal Server Error");
+        }
+    },
+    async removeUserPermission(req, res) {
         try {
             const { userId, permissionId } = req.body;
             if (!userId || !permissionId) {
-                return res.status(400).json({ error: "Thiếu userId hoặc permissionId" });
+                return res.status(400).send("Missing userId or permissionId");
             }
 
-            await PermissionModel.removePermissionFromUser(userId, permissionId);
-            res.json({ message: "Thu hồi quyền thành công" });
+            await PermissionModel.removeUserPermission(userId, permissionId);
+            res.sendStatus(204);
         } catch (err) {
-            res.status(500).json({ error: err.message });
+            console.error("Error removing user permission:", err);
+            res.status(500).send("Internal Server Error");
+        }
+    },
+
+    async removeGroupPermission(req, res) {
+        try {
+            const { groupId, permissionId } = req.body;
+            if (!groupId || !permissionId) {
+                return res.status(400).send("Missing groupId or permissionId");
+            }
+
+            await PermissionModel.removeGroupPermission(groupId, permissionId);
+            res.sendStatus(204);
+        } catch (err) {
+            console.error("Error removing group permission:", err);
+            res.status(500).send("Internal Server Error");
+        }
+    },
+    async getEffectivePermissions(req, res) {
+        try {
+            const { userId } = req.params;
+            const data = await PermissionModel.getEffectivePermissions(userId);
+            res.json(data);
+        } catch (err) {
+            console.error("Error fetching effective permissions:", err);
+            res.status(500).send("Internal Server Error");
         }
     }
-}
+
+
+
+
+};
 
 module.exports = PermissionController;

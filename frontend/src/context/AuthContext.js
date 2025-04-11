@@ -29,19 +29,26 @@ export const AuthProvider = ({ children }) => {
     const login = async (username, password) => {
         try {
             const response = await axios.post('http://sample.pihlgp.com:5000/api/auth/login', { username, password });
-            const { token, user } = response.data;  // Chỉ lấy token và user
+            const { token, user } = response.data;
+
             setUser(user);
             localStorage.setItem("user", JSON.stringify(user));
             localStorage.setItem("token", token);
+
+            return { token, user };
         } catch (error) {
             throw new Error(error.response?.data?.message || "Login failed");
         }
     };
 
 
+
+
     const logout = () => {
         setUser(null);
         localStorage.removeItem("user");
+        localStorage.removeItem("token");
+        localStorage.removeItem("permissions");
     };
 
     if (isLoading) {

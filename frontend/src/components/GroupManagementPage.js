@@ -261,8 +261,15 @@ const GroupManagementPage = () => {
                     }}
                     onOk={() => addUserForm.submit()}
                 >
-                    <Form form={addUserForm} layout="vertical" onFinish={handleAddUserToGroup}>
-                        <Form.Item name="groupId" initialValue={editingGroup ? editingGroup.GroupID : null} hidden>
+                    <Form
+                        form={addUserForm}
+                        layout="vertical"
+                        onFinish={handleAddUserToGroup}
+                        initialValues={{
+                            groupId: editingGroup ? editingGroup.GroupID : null
+                        }}
+                    >
+                        <Form.Item name="groupId" hidden>
                             <Input />
                         </Form.Item>
                         <Form.Item
@@ -274,7 +281,7 @@ const GroupManagementPage = () => {
                                 options={searchOptions}
                                 placeholder="Type username..."
                                 onSearch={handleUserSearchModal}
-                                onSelect={(value, option) => {
+                                onSelect={(value) => {
                                     addUserForm.setFieldsValue({ userId: value });
                                 }}
                                 filterOption={false}
@@ -282,6 +289,7 @@ const GroupManagementPage = () => {
                         </Form.Item>
                     </Form>
                 </Modal>
+
             </div>
         </div>
 

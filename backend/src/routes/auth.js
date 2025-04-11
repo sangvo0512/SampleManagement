@@ -37,6 +37,20 @@ router.post("/login", async (req, res, next) => {
                 { expiresIn: "1h" }
             );
 
+            // Truy vấn permissions
+            const permissionResult = await pool
+                .request()
+                .input("userId", sql.Int, dbUser.UserID)
+                .query(`
+    SELECT P.PermissionKey
+    FROM UserPermissions UP
+    JOIN Permissions P ON UP.PermissionID = P.PermissionID
+    WHERE UP.UserID = @userId
+`);
+
+            // Lấy danh sách các permission key
+            const permissions = permissionResult.recordset.map(row => row.PermissionKey);
+
             return res.json({
                 message: "Login successful",
                 token,
@@ -46,8 +60,10 @@ router.post("/login", async (req, res, next) => {
                     fullName: dbUser.FullName,
                     email: dbUser.Email,
                     departmentId: dbUser.DepartmentID
-                }
+                },
+                permissions // 👈 Thêm dòng này để gửi xuống frontend
             });
+
 
         } catch (dbError) {
             console.error("Database Error:", dbError);

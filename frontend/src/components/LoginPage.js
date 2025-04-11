@@ -4,21 +4,30 @@ import { useNavigate } from 'react-router-dom';
 import '../styles/LoginPage.css';
 import logo from '../assets/logo-removebg-preview.jpg';
 import { useAuth } from '../context/AuthContext';
+import { usePermissions } from '../context/PermissionContext'; // import hook
+
 function LoginPage() {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState(null);
     const navigate = useNavigate();
     const { login } = useAuth();
+    const { fetchPermissionsFromServer } = usePermissions();
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            await login(username, password);
+            const result = await login(username, password);
+            const { user } = result;
+
+            await fetchPermissionsFromServer(user.userId);
+
             navigate('/dashboard');
         } catch (err) {
             setError('Login failed. Please check your account and password again.');
         }
     };
+
 
     return (
         <div className="login-container">
