@@ -1,5 +1,5 @@
 // src/components/DepartmentManagement.js
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import axios from "axios";
 import { Table, Button, Modal, Input, Form, Popconfirm } from "antd";
 import "../styles/DepartmentManagementPage.css";
@@ -10,25 +10,28 @@ const DepartmentManagement = () => {
     const [isModalVisible, setIsModalVisible] = useState(false);
     const [editingDepartment, setEditingDepartment] = useState(null);
     const [form] = Form.useForm();
+    const API_BASE = process.env.REACT_APP_API_BASE || "/api";
+    const fetchDepartments = useCallback(
+        async () => {
+            setLoading(true);
+            try {
+                const response = await axios.get(`${API_BASE}/departments`);
+                setDepartments(response.data);
+            } catch (error) {
+                console.error("Error fetching departments:", error);
+            }
+            setLoading(false);
+        }, [API_BASE]);
 
     useEffect(() => {
         fetchDepartments();
-    }, []);
+    }, [fetchDepartments]);
 
-    const fetchDepartments = async () => {
-        setLoading(true);
-        try {
-            const response = await axios.get("http://sample.pihlgp.com:5000/api/departments");
-            setDepartments(response.data);
-        } catch (error) {
-            console.error("Error fetching departments:", error);
-        }
-        setLoading(false);
-    };
+
 
     const handleDelete = async (departmentId) => {
         try {
-            await axios.delete(`http://sample.pihlgp.com:5000/api/departments/${departmentId}`);
+            await axios.delete(`${API_BASE}/departments/${departmentId}`);
             fetchDepartments();
         } catch (error) {
             console.error("Error deleting department:", error);
@@ -53,16 +56,11 @@ const DepartmentManagement = () => {
         try {
             if (editingDepartment) {
                 await axios.put(
-                    `http://sample.pihlgp.com:5000/api/departments/${editingDepartment.DepartmentID}`,
-                    { DepartmentName: values.departmentName },
-                    { headers: { "Content-Type": "application/json" } }
+                    `${API_BASE}/departments/${editingDepartment.DepartmentID}`, { DepartmentName: values.departmentName }, { headers: { "Content-Type": "application/json" } }
                 );
             } else {
                 await axios.post(
-                    "http://sample.pihlgp.com:5000/api/departments",
-                    { DepartmentName: values.departmentName },
-                    { headers: { "Content-Type": "application/json" } }
-                );
+                    `${API_BASE}/departments`, { DepartmentName: values.departmentName }, { headers: { "Content-Type": "application/json" } });
             }
             fetchDepartments();
             setIsModalVisible(false);

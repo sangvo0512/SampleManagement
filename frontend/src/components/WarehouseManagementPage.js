@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { Table, Button, Modal, Form, Input, message, Popconfirm } from "antd";
 import axios from "axios";
 import "../styles/WarehouseManagementPage.css";
@@ -10,23 +10,23 @@ const WarehouseManagementPage = () => {
     const [editingWarehouse, setEditingWarehouse] = useState(null);
     const [form] = Form.useForm();
     const [searchTerm, setSearchTerm] = useState("");
-    const API_BASE = "http://sample.pihlgp.com:5000/api/warehouses";
+    const API_BASE = process.env.REACT_APP_API_BASE || "/api";
 
-    const fetchWarehouses = async () => {
+    const fetchWarehouses = useCallback(async () => {
         setLoading(true);
         try {
-            const res = await axios.get(API_BASE);
+            const res = await axios.get(`${API_BASE}/warehouses`);
             setWarehouses(res.data);
         } catch (err) {
             console.error(err);
             message.error("Failed to load warehouses");
         }
         setLoading(false);
-    };
+    }, [API_BASE]);
 
     useEffect(() => {
         fetchWarehouses();
-    }, []);
+    }, [fetchWarehouses]);
     const filteredWarehouses = warehouses.filter(wh =>
         wh.WarehouseName.toLowerCase().includes(searchTerm.toLowerCase())
     );
@@ -34,14 +34,14 @@ const WarehouseManagementPage = () => {
     const handleSubmit = async (values) => {
         try {
             if (editingWarehouse) {
-                await axios.put(`${API_BASE}/${editingWarehouse.WarehouseID}`, {
+                await axios.put(`${API_BASE}/warehouses/${editingWarehouse.WarehouseID}`, {
                     warehouseName: values.WarehouseName,
                 });
 
 
                 message.success("Warehouse updated");
             } else {
-                await axios.post(API_BASE, {
+                await axios.post(`${API_BASE}/warehouses`, {
                     warehouseName: values.WarehouseName,
                 });
 
@@ -60,7 +60,7 @@ const WarehouseManagementPage = () => {
 
     const handleDelete = async (id) => {
         try {
-            await axios.delete(`${API_BASE}/${id}`);
+            await axios.delete(`${API_BASE}/warehouses/${id}`);
             message.success("Warehouse deleted");
             fetchWarehouses();
         } catch (err) {

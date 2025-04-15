@@ -1,5 +1,5 @@
 // src/components/UserManagement.js
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import axios from "axios";
 import { Select, Table, Button, Modal, Input, Form, Popconfirm } from "antd";
 import "../styles/UserManagementPage.css";  // Import file CSS
@@ -12,34 +12,39 @@ const UserManagement = () => {
     const [form] = Form.useForm();
     const [departments, setDepartments] = useState([]);
     const [searchTerm, setSearchTerm] = useState("");
-    useEffect(() => {
-        fetchUsers();
-        fetchDepartments();
-    }, []);
+    const API_BASE = process.env.REACT_APP_API_BASE || "/api";
 
-    const fetchUsers = async () => {
-        setLoading(true);
-        try {
-            const response = await axios.get("http://sample.pihlgp.com:5000/api/users");
-            setUsers(response.data);
-        } catch (error) {
-            console.error("Error fetching users:", error);
-        }
-        setLoading(false);
-    };
+    const fetchUsers = useCallback(
+        async () => {
+            setLoading(true);
+            try {
+                const response = await axios.get(`${API_BASE}/users`);
+                setUsers(response.data);
+            } catch (error) {
+                console.error("Error fetching users:", error);
+            }
+            setLoading(false);
+        }, [API_BASE]
+    );
 
-    const fetchDepartments = async () => {
+    const fetchDepartments = useCallback(async () => {
         try {
-            const response = await axios.get("http://sample.pihlgp.com:5000/api/departments");
+            const response = await axios.get(`${API_BASE}/departments`);
             setDepartments(response.data);
         } catch (error) {
             console.error("Error fetching departments:", error);
         }
-    };
+    }, [API_BASE]);
+
+    useEffect(() => {
+        fetchUsers();
+        fetchDepartments();
+    }, [fetchUsers, fetchDepartments]);
+
 
     const handleDelete = async (userId) => {
         try {
-            await axios.delete(`http://sample.pihlgp.com:5000/api/users/${userId}`);
+            await axios.delete(`${API_BASE}/users/${userId}`);
             fetchUsers();
         } catch (error) {
             console.error("Error deleting user:", error);
@@ -67,9 +72,9 @@ const UserManagement = () => {
     const handleSave = async (values) => {
         try {
             if (editingUser) {
-                await axios.put(`http://sample.pihlgp.com:5000/api/users/${editingUser.UserID}`, values);
+                await axios.put(`${API_BASE}/users/${editingUser.UserID}`, values);
             } else {
-                await axios.post("http://sample.pihlgp.com:5000/api/users", values);
+                await axios.post(`${API_BASE}/users`, values);
             }
             fetchUsers();
             setIsModalVisible(false);

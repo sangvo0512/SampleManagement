@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import axios from "axios";
 import { Table, Button, Modal, Input, Form, message, Popconfirm } from "antd";
 import { useAuth } from "../context/AuthContext";
@@ -10,23 +10,26 @@ const OperationCodeManagementPage = () => {
     const [isModalVisible, setIsModalVisible] = useState(false);
     const [editingCode, setEditingCode] = useState(null);
     const [form] = Form.useForm();
+    const API_BASE = process.env.REACT_APP_API_BASE || "/api";
+
+    const fetchOperationCodes = useCallback(
+        async () => {
+            try {
+                const response = await axios.get(`${API_BASE}/operationCode`);
+                setOperationCodes(response.data);
+            } catch (error) {
+                console.error("Error fetching operation codes:", error);
+            }
+        }, [API_BASE]
+    );
 
     useEffect(() => {
         fetchOperationCodes();
-    }, []);
-
-    const fetchOperationCodes = async () => {
-        try {
-            const response = await axios.get("http://sample.pihlgp.com:5000/api/operationCode");
-            setOperationCodes(response.data);
-        } catch (error) {
-            console.error("Error fetching operation codes:", error);
-        }
-    };
+    }, [fetchOperationCodes]);
 
     const handleDelete = async (id) => {
         try {
-            await axios.delete(`http://sample.pihlgp.com:5000/api/operationCode/${id}`);
+            await axios.delete(`${API_BASE}/operationCode/${id}`);
             fetchOperationCodes();
             message.success("Deleted successfully!");
         } catch (error) {
@@ -49,9 +52,9 @@ const OperationCodeManagementPage = () => {
     const handleSave = async (values) => {
         try {
             if (editingCode) {
-                await axios.put(`http://sample.pihlgp.com:5000/api/operationCode/${editingCode.ReasonID}`, values);
+                await axios.put(`${API_BASE}/operationCode/${editingCode.ReasonID}`, values);
             } else {
-                await axios.post("http://sample.pihlgp.com:5000/api/operationCode", values);
+                await axios.post(`${API_BASE}/operationCode`, values);
             }
             fetchOperationCodes();
             setIsModalVisible(false);

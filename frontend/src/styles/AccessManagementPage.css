@@ -1,0 +1,84 @@
+/* Tổng thể container của trang */
+.access-management {
+    padding: 2rem;
+    background-color: #fffcf7;
+    min-height: 100vh;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Tiêu đề */
+.access-management h2 {
+    font-size: 1.8rem;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 1.5rem;
+    text-align: center;
+}
+
+/* Ô tìm kiếm */
+.access-search {
+    float: right;
+    margin-bottom: 1.5rem;
+    width: 300px;
+}
+
+/* Bảng dữ liệu */
+.access-table {
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    margin-bottom: 2rem;
+}
+
+/* Header bảng */
+.access-management .ant-table-thead>tr>th {
+    background-color: #e9ecef;
+    color: #333;
+    font-weight: 600;
+}
+
+/* Hover dòng bảng */
+.access-management .ant-table-tbody>tr:hover {
+    background-color: #f1f1f1;
+}
+
+/* Modal */
+.modal-custom .ant-modal-content {
+    border-radius: 8px;
+}
+
+/* Label form */
+.access-management .ant-form-item-label>label {
+    font-weight: 500;
+    color: #333;
+}
+
+/* Nút chính */
+.access-primary-button,
+.access-management .ant-btn-primary {
+    background-color: #64cacf;
+    border-color: #64cacf;
+    color: #fff;
+    text-align: center;
+}
+
+.access-primary-button:hover,
+.access-management .ant-btn-primary:hover {
+    background-color: #4ca7c3;
+    border-color: #4ca7c3;
+}
+
+/* Nút xóa */
+.access-danger-button,
+.access-management .ant-btn-danger {
+    background-color: #e74c3c;
+    border-color: #e74c3c;
+    color: #fff;
+}
+
+.access-danger-button:hover,
+.access-management .ant-btn-danger:hover {
+    background-color: #c0392b;
+    border-color: #c0392b;
+}

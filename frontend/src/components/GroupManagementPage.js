@@ -1,43 +1,40 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { Table, Button, Modal, Input, Form, message, AutoComplete, Popconfirm } from "antd";
 import axios from "axios";
 import "../styles/GroupManagementPage.css";
 
 const GroupManagementPage = () => {
-    const API_BASE = "http://sample.pihlgp.com:5000/api";
+    const API_BASE = process.env.REACT_APP_API_BASE || "/api";
 
     // State cho danh sách nhóm và loading
     const [groups, setGroups] = useState([]);
     const [loading, setLoading] = useState(false);
-
     // State cho modal nhóm (tạo/chỉnh sửa)
     const [groupModalVisible, setGroupModalVisible] = useState(false);
     const [editingGroup, setEditingGroup] = useState(null);
     const [groupForm] = Form.useForm();
-
     // State cho danh sách thành viên của nhóm đang chỉnh sửa
     const [groupUsers, setGroupUsers] = useState([]);
-
     // State cho modal thêm user vào nhóm
     const [addUserModalVisible, setAddUserModalVisible] = useState(false);
     const [addUserForm] = Form.useForm();
-
     // State cho toàn bộ người dùng và tìm kiếm (AutoComplete options)
     const [allUsers, setAllUsers] = useState([]);
     const [searchOptions, setSearchOptions] = useState([]);
-
     // Lấy danh sách nhóm
-    const fetchGroups = async () => {
-        setLoading(true);
-        try {
-            const response = await axios.get(`${API_BASE}/groups`);
-            setGroups(response.data);
-        } catch (error) {
-            console.error("Error fetching groups:", error);
-            message.error("Failed to load groups");
-        }
-        setLoading(false);
-    };
+    const fetchGroups = useCallback(
+        async () => {
+            setLoading(true);
+            try {
+                const response = await axios.get(`${API_BASE}/groups`);
+                setGroups(response.data);
+            } catch (error) {
+                console.error("Error fetching groups:", error);
+                message.error("Failed to load groups");
+            }
+            setLoading(false);
+        }, [API_BASE]
+    );
 
     // Lấy danh sách thành viên của một nhóm
     const fetchGroupUsers = async (groupId) => {
@@ -51,20 +48,22 @@ const GroupManagementPage = () => {
     };
 
     // Lấy danh sách tất cả user
-    const fetchAllUsers = async () => {
-        try {
-            const response = await axios.get(`${API_BASE}/users`);
-            setAllUsers(response.data);
-        } catch (error) {
-            console.error("Error fetching users:", error);
-            message.error("Failed to load users");
-        }
-    };
+    const fetchAllUsers = useCallback(
+        async () => {
+            try {
+                const response = await axios.get(`${API_BASE}/users`);
+                setAllUsers(response.data);
+            } catch (error) {
+                console.error("Error fetching users:", error);
+                message.error("Failed to load users");
+            }
+        }, [API_BASE]
+    );
 
     useEffect(() => {
         fetchGroups();
         fetchAllUsers();
-    }, []);
+    }, [fetchGroups, fetchAllUsers]);
 
     const handleUserSearchModal = (value) => {
         if (!value) {

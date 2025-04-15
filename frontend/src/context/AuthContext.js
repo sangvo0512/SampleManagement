@@ -1,13 +1,11 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import axios from "axios";
 const AuthContext = createContext();
-
 export const AuthProvider = ({ children }) => {
+    const API_BASE = process.env.REACT_APP_API_BASE || "/api";
     const [user, setUser] = useState(null);
-    const [isLoading, setIsLoading] = useState(true); // 🔹 Thêm trạng thái loading
-    // axios.defaults.baseURL = "http://sample.pihlgp.com:5000/api";
-    // axios.defaults.withCredentials = true; // Nếu API yêu cầu cookie
-    // axios.defaults.headers.common["Authorization"] = `Bearer ${localStorage.getItem("token")}`;
+    const [isLoading, setIsLoading] = useState(true);
+
     useEffect(() => {
         const fetchUser = async () => {
             try {
@@ -28,7 +26,7 @@ export const AuthProvider = ({ children }) => {
 
     const login = async (username, password) => {
         try {
-            const response = await axios.post('http://sample.pihlgp.com:5000/api/auth/login', { username, password });
+            const response = await axios.post(`${API_BASE}/auth/login`, { username, password });
             const { token, user } = response.data;
 
             setUser(user);
@@ -52,7 +50,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     if (isLoading) {
-        return <div>Loading...</div>; // 🔹 Hiển thị "Loading..." trong khi chờ xác thực
+        return <div>Loading...</div>;
     }
 
     return (

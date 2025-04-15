@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
     Tabs,
     Table,
@@ -14,7 +14,6 @@ import "../styles/AccessManagementPage.css";
 
 const AccessManagementPage = () => {
     const [activeTab, setActiveTab] = useState("userPermissions");
-
     const [users, setUsers] = useState([]);
     const [filteredUsers, setFilteredUsers] = useState([]);
     const [searchUser, setSearchUser] = useState("");
@@ -22,7 +21,6 @@ const AccessManagementPage = () => {
     const [userPermissions, setUserPermissions] = useState([]);
     const [userPermModalVisible, setUserPermModalVisible] = useState(false);
     const [userPermForm] = Form.useForm();
-
     const [groups, setGroups] = useState([]);
     const [filteredGroups, setFilteredGroups] = useState([]);
     const [searchGroup, setSearchGroup] = useState("");
@@ -30,18 +28,44 @@ const AccessManagementPage = () => {
     const [groupPermissions, setGroupPermissions] = useState([]);
     const [groupPermModalVisible, setGroupPermModalVisible] = useState(false);
     const [groupPermForm] = Form.useForm();
-
-    const [permissions, setPermissions] = useState([]);  // Lưu danh sách tất cả quyền
-    // New state to manage user modal for permission management
+    const [permissions, setPermissions] = useState([]);
     const [userPermManageModalVisible, setUserPermManageModalVisible] = useState(false);
+    const [groupAssignModalVisible, setGroupAssignModalVisible] = useState(false);
+    const API_BASE = process.env.REACT_APP_API_BASE || "/api";
 
-    const API_BASE = "http://sample.pihlgp.com:5000/api";
+    const fetchUsers = useCallback(async () => {
+        try {
+            const res = await axios.get(`${API_BASE}/users`);
+            setUsers(res.data);
+            setFilteredUsers(res.data);
+        } catch (err) {
+            message.error("Failed to load users");
+        }
+    }, [API_BASE]);
 
+    const fetchGroups = useCallback(async () => {
+        try {
+            const res = await axios.get(`${API_BASE}/groups`);
+            setGroups(res.data);
+            setFilteredGroups(res.data);
+        } catch (err) {
+            message.error("Failed to load groups");
+        }
+    }, [API_BASE]);
+
+    const fetchPermissions = useCallback(async () => {
+        try {
+            const res = await axios.get(`${API_BASE}/permissions`);
+            setPermissions(res.data);
+        } catch (err) {
+            message.error("Failed to load permissions");
+        }
+    }, [API_BASE]);
     useEffect(() => {
         fetchUsers();
         fetchGroups();
-        fetchPermissions();  // Fetch permissions
-    }, []);
+        fetchPermissions();
+    }, [fetchUsers, fetchGroups, fetchPermissions]);
 
     useEffect(() => {
         const filtered = users.filter((u) =>
@@ -57,34 +81,6 @@ const AccessManagementPage = () => {
         setFilteredGroups(filtered);
     }, [searchGroup, groups]);
 
-    const fetchUsers = async () => {
-        try {
-            const res = await axios.get(`${API_BASE}/users`);
-            setUsers(res.data);
-            setFilteredUsers(res.data);
-        } catch (err) {
-            message.error("Failed to load users");
-        }
-    };
-
-    const fetchGroups = async () => {
-        try {
-            const res = await axios.get(`${API_BASE}/groups`);
-            setGroups(res.data);
-            setFilteredGroups(res.data);
-        } catch (err) {
-            message.error("Failed to load groups");
-        }
-    };
-
-    const fetchPermissions = async () => {  // Fetch all permissions
-        try {
-            const res = await axios.get(`${API_BASE}/permissions`);
-            setPermissions(res.data);
-        } catch (err) {
-            message.error("Failed to load permissions");
-        }
-    };
 
     const fetchUserPermissions = async (userId) => {
         try {
@@ -116,7 +112,6 @@ const AccessManagementPage = () => {
         setGroupPermModalVisible(true);
     };
 
-    // Xử lý gán quyền cho user (merge quyền cũ với quyền mới được chọn)
     const handleAssignPermissionToUser = async (values) => {
         try {
             const currentPermissionIds = userPermissions.map((p) => p.PermissionID);
@@ -153,7 +148,6 @@ const AccessManagementPage = () => {
         }
     };
 
-    // Sửa hàm gán quyền cho group để merge các quyền hiện có và cho phép chọn nhiều quyền
     const handleAssignPermissionToGroup = async (values) => {
         try {
             const currentPermissionIds = groupPermissions.map((p) => p.PermissionID);
@@ -163,11 +157,11 @@ const AccessManagementPage = () => {
                 groupId: values.groupId,
                 permissionIds: merged,
             };
-            console.log("Payload gửi lên:", payload);
+
             await axios.post(`${API_BASE}/permissions/group`, payload);
             message.success("Permissions assigned to group");
             fetchGroupPermissions(values.groupId);
-            setGroupPermModalVisible(false);
+            setGroupAssignModalVisible(false);
             groupPermForm.resetFields();
         } catch (err) {
             console.error("Failed to assign permission to group:", err?.response?.data || err.message);
@@ -279,7 +273,6 @@ const AccessManagementPage = () => {
                                     <Button
                                         type="primary"
                                         onClick={() => {
-                                            // Set current permissions into form so user sees merge values
                                             userPermForm.setFieldsValue({
                                                 userId: selectedUser?.UserID,
                                                 permissionIds: userPermissions.map((p) => p.PermissionID),
@@ -363,39 +356,7 @@ const AccessManagementPage = () => {
                                                 permissionIds: groupPermissions.map((p) => p.PermissionID),
                                             });
 
-                                            // Mở modal gán quyền
-                                            setTimeout(() => {
-                                                Modal.confirm({
-                                                    title: "Assign Permission to Group",
-                                                    content: (
-                                                        <Form form={groupPermForm} layout="vertical" onFinish={handleAssignPermissionToGroup}>
-                                                            <Form.Item name="groupId" hidden>
-                                                                <Input />
-                                                            </Form.Item>
-                                                            <Form.Item
-                                                                name="permissionIds"
-                                                                label="Select Permissions"
-                                                                rules={[{ required: true, message: "Please select at least one permission" }]}
-                                                            >
-                                                                <Select
-                                                                    mode="multiple"
-                                                                    placeholder="Select permissions"
-                                                                    allowClear
-                                                                >
-                                                                    {permissions.map((permission) => (
-                                                                        <Select.Option key={permission.PermissionID} value={permission.PermissionID}>
-                                                                            {permission.PermissionName}
-                                                                        </Select.Option>
-                                                                    ))}
-                                                                </Select>
-                                                            </Form.Item>
-                                                        </Form>
-                                                    ),
-                                                    onOk: () => groupPermForm.submit(),
-                                                    onCancel: () => groupPermForm.resetFields(),
-                                                    okText: "Submit",
-                                                });
-                                            }, 100);
+                                            setGroupAssignModalVisible(true);
                                         }}
                                         style={{ marginBottom: 16 }}
                                     >
@@ -409,8 +370,33 @@ const AccessManagementPage = () => {
                                         pagination={false}
                                     />
                                 </Modal>
-                            </>
 
+                                <Modal
+                                    title="Assign Permission to Group"
+                                    open={groupAssignModalVisible}
+                                    onCancel={() => setGroupAssignModalVisible(false)}
+                                    onOk={() => groupPermForm.submit()}
+                                >
+                                    <Form form={groupPermForm} layout="vertical" onFinish={handleAssignPermissionToGroup}>
+                                        <Form.Item name="groupId" hidden>
+                                            <Input />
+                                        </Form.Item>
+                                        <Form.Item
+                                            name="permissionIds"
+                                            label="Select Permissions"
+                                            rules={[{ required: true, message: "Please select at least one permission" }]}
+                                        >
+                                            <Select mode="multiple" placeholder="Select permissions" allowClear>
+                                                {permissions.map((permission) => (
+                                                    <Select.Option key={permission.PermissionID} value={permission.PermissionID}>
+                                                        {permission.PermissionName}
+                                                    </Select.Option>
+                                                ))}
+                                            </Select>
+                                        </Form.Item>
+                                    </Form>
+                                </Modal>
+                            </>
                         ),
                     },
                 ]}
