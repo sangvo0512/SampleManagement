@@ -9,7 +9,23 @@ class SampleModel {
     }
 
     static async createSample(sampleData) {
-        const { serialNumber, brand, BU, season, itemCode, workingNO, articleNO, round, notifyProductionQuantity, dateInform, quantity, inventoryLocation } = sampleData;
+        const {
+            serialNumber,
+            brand,
+            BU,
+            season,
+            itemCode,
+            workingNO,
+            articleNO,
+            round,
+            notifyProductionQuantity,
+            dateInform,
+            quantity,
+            inventoryLocation,
+            warehouseID,
+            state = 'Available',
+            BorrowdQuantity = 0
+        } = sampleData;
 
         const pool = await poolPromise;
         const result = await pool.request()
@@ -20,21 +36,28 @@ class SampleModel {
             .input("itemCode", sql.NVarChar, itemCode)
             .input("workingNO", sql.NVarChar, workingNO)
             .input("articleNO", sql.NVarChar, articleNO)
-            .input("round", sql.Int, round)
+            .input("round", sql.NVarChar, round)
             .input("notifyProductionQuantity", sql.Int, notifyProductionQuantity)
             .input("dateInform", sql.Date, dateInform)
             .input("quantity", sql.Int, quantity)
             .input("inventoryLocation", sql.NVarChar, inventoryLocation)
+            .input("warehouseID", sql.Int, warehouseID)
+            .input("state", sql.NVarChar, state)
+            .input("borrowdQuantity", sql.Int, BorrowdQuantity)
             .query(
                 `INSERT INTO Samples 
-                 (SerialNumber, Brand, BU, Season, ItemCode, WorkingNO, ArticleNO, Round, NotifyProductionQuantity, DateInform, Quantity, InventoryLocation, State)
+                 (SerialNumber, Brand, BU, Season, ItemCode, WorkingNO, ArticleNO, Round, 
+                  NotifyProductionQuantity, DateInform, Quantity, InventoryLocation, WarehouseID, State, BorrowdQuantity)
                  VALUES 
-                 (@serialNumber, @brand, @BU, @season, @itemCode, @workingNO, @articleNO, @round, @notifyProductionQuantity, @dateInform, @quantity, @inventoryLocation, 'Available');
+                 (@serialNumber, @brand, @BU, @season, @itemCode, @workingNO, @articleNO, @round, 
+                  @notifyProductionQuantity, @dateInform, @quantity, @inventoryLocation, @warehouseID, @state, @borrowdQuantity);
                  SELECT SCOPE_IDENTITY() AS SampleID;`
             );
 
         return result.recordset[0].SampleID;
     }
+
+
 
     static async updateSample(id, sampleData) {
         const { brand, BU, season, itemCode, workingNO, articleNO, round, notifyProductionQuantity, dateInform, quantity, inventoryLocation, state } = sampleData;
@@ -48,7 +71,7 @@ class SampleModel {
             .input("itemCode", sql.NVarChar, itemCode)
             .input("workingNO", sql.NVarChar, workingNO)
             .input("articleNO", sql.NVarChar, articleNO)
-            .input("round", sql.Int, round)
+            .input("round", sql.NVarChar, round)
             .input("notifyProductionQuantity", sql.Int, notifyProductionQuantity)
             .input("dateInform", sql.Date, dateInform)
             .input("quantity", sql.Int, quantity)

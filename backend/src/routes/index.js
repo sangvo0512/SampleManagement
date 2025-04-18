@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 
 const authRoutes = require("./auth");
-const samplesRoutes = require("./sample.js");
+const samplesRoutes = require("./samples");
 const qrCodeRoutes = require("./qrCode");
 const usersRoutes = require("./users");
 const groupsRoutes = require("./groups");

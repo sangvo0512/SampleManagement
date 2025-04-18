@@ -1,19 +1,69 @@
-/* src/styles/SamplePage.css */
-
-* {
-    box-sizing: border-box;
-}
-
-body,
-html {
-    margin: 0;
-    padding: 0;
-    font-family: Arial, sans-serif;
-    background: #f7f7f7;
-}
-
-.homepage {
+/* SamplePage.css */
+.sample-page {
+    background-color: #fffcf7;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    padding: 24px;
+    padding: 2rem;
     min-height: 100vh;
-    display: flex;
-    flex-direction: column;
+}
+
+.sample-page .ant-btn-primary {
+    background-color: #64cacf;
+    border-color: #64cacf;
+    border-radius: 10px;
+}
+
+.sample-page .ant-btn-primary:hover {
+    background-color: #56b3c0;
+    border-color: #56b3c0;
+}
+
+.sample-page .ant-btn {
+    border-radius: 8px;
+}
+
+.sample-page .ant-modal-content {
+    border-radius: 12px;
+}
+
+.sample-page .ant-table {
+    background-color: #ffffff;
+    border-radius: 12px;
+    padding: 12px;
+}
+
+.sample-page .ant-form-item {
+    margin-bottom: 16px;
+}
+
+.sample-page .ant-select-selector {
+    border-radius: 8px !important;
+}
+
+.sample-page .ant-input {
+    border-radius: 8px !important;
+}
+
+/* Tiêu đề trang */
+.sample-page h3 {
+    font-size: 1.8rem;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 1.5rem;
+    text-align: center;
+}
+
+/* Bảng dữ liệu */
+.sample-page-table {
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+/* Header của bảng */
+.sample-page .ant-table-thead>tr>th {
+    background-color: #e9ecef;
+    color: #333;
+    font-weight: 600;
 }

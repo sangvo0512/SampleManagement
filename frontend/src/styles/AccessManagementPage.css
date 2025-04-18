@@ -1,4 +1,4 @@
-/* Tổng thể container của trang */
+/* Container tổng thể */
 .access-management {
     padding: 2rem;
     background-color: #fffcf7;
@@ -6,7 +6,7 @@
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-/* Tiêu đề */
+/* Tiêu đề trang */
 .access-management h2 {
     font-size: 1.8rem;
     font-weight: 600;
@@ -15,70 +15,107 @@
     text-align: center;
 }
 
-/* Ô tìm kiếm */
-.access-search {
-    float: right;
+/* Tabs style */
+.access-management .ant-tabs-nav {
     margin-bottom: 1.5rem;
-    width: 300px;
 }
 
-/* Bảng dữ liệu */
-.access-table {
+.access-management .ant-tabs-tab {
+    font-weight: 500;
+    padding: 8px 16px;
+    border-radius: 8px 8px 0 0;
+    background-color: #f5f5f5;
+    margin-right: 8px;
+    transition: all 0.3s ease;
+}
+
+.access-management .ant-tabs-tab-active {
+    background-color: #64cacf !important;
+    color: white !important;
+}
+
+/* Thanh tìm kiếm */
+.access-management .search-bar {
+    max-width: 300px;
+    margin-bottom: 1rem;
+}
+
+.access-management .ant-input {
+    border-radius: 8px;
+    padding: 6px 12px;
+}
+
+.access-management .ant-input-search-button {
+    border-radius: 0 8px 8px 0;
+    background-color: #64cacf;
+    border-color: #64cacf;
+    color: white;
+}
+
+.access-management .ant-input-search-button:hover {
+    background-color: #4ca7c3;
+    border-color: #4ca7c3;
+}
+
+/* Bảng người dùng */
+.access-management-table {
     background-color: #fff;
     border-radius: 8px;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
     overflow: hidden;
-    margin-bottom: 2rem;
 }
 
-/* Header bảng */
+/* Header của bảng */
 .access-management .ant-table-thead>tr>th {
     background-color: #e9ecef;
     color: #333;
     font-weight: 600;
 }
 
-/* Hover dòng bảng */
+/* Hiệu ứng hover dòng */
 .access-management .ant-table-tbody>tr:hover {
     background-color: #f1f1f1;
 }
 
-/* Modal */
-.modal-custom .ant-modal-content {
-    border-radius: 8px;
-}
-
-/* Label form */
-.access-management .ant-form-item-label>label {
+/* Nút "Manage Permissions" */
+.permission-button .ant-btn {
+    background-color: #64cacf;
+    border: none;
+    color: white;
     font-weight: 500;
-    color: #333;
+    padding: 6px 12px;
+    border-radius: 6px;
+    transition: background-color 0.3s ease;
 }
 
-/* Nút chính */
-.access-primary-button,
+.permission-button .ant-btn:hover {
+    background-color: #4ca7c3;
+}
+
+/* Nút trong modal */
 .access-management .ant-btn-primary {
     background-color: #64cacf;
     border-color: #64cacf;
-    color: #fff;
-    text-align: center;
+    color: white;
 }
 
-.access-primary-button:hover,
 .access-management .ant-btn-primary:hover {
     background-color: #4ca7c3;
     border-color: #4ca7c3;
 }
 
-/* Nút xóa */
-.access-danger-button,
 .access-management .ant-btn-danger {
     background-color: #e74c3c;
     border-color: #e74c3c;
-    color: #fff;
+    color: white;
 }
 
-.access-danger-button:hover,
 .access-management .ant-btn-danger:hover {
     background-color: #c0392b;
     border-color: #c0392b;
+}
+
+/* Bo tròn modal */
+.access-management .ant-modal-content {
+    border-radius: 8px;
 }

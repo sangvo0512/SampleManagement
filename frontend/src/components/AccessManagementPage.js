@@ -191,7 +191,7 @@ const AccessManagementPage = () => {
             title: "Action",
             key: "action",
             render: (_, record) => (
-                <Button type="primary" onClick={() => handleUserSelect(record)}>
+                <Button className="permission-button" type="primary" onClick={() => handleUserSelect(record)}>
                     Manage Permissions
                 </Button>
             ),
@@ -204,8 +204,8 @@ const AccessManagementPage = () => {
             title: "Action",
             key: "action",
             render: (_, record) => (
-                <Button
-                    danger
+                <Button className="permission-button"
+                    type="danger"
                     onClick={() => handleRemovePermissionFromUser(selectedUser.UserID, record.PermissionID)}
                 >
                     Remove
@@ -220,7 +220,7 @@ const AccessManagementPage = () => {
             title: "Action",
             key: "action",
             render: (_, record) => (
-                <Button type="primary" onClick={() => handleGroupSelect(record)}>
+                <Button className="permission-button" onClick={() => handleGroupSelect(record)}>
                     Manage Permissions
                 </Button>
             ),
@@ -244,8 +244,8 @@ const AccessManagementPage = () => {
     ];
 
     return (
-        <div style={{ padding: 20 }}>
-            <h2>Access Management</h2>
+        <div className="access-page-container">
+            <h2 className="access-page-title">Access Management</h2>
             <Tabs
                 activeKey={activeTab}
                 onChange={setActiveTab}
@@ -258,9 +258,9 @@ const AccessManagementPage = () => {
                             <>
                                 <Input.Search
                                     placeholder="Search by username"
+                                    className="search-bar"
                                     value={searchUser}
                                     onChange={(e) => setSearchUser(e.target.value)}
-                                    style={{ width: 300, marginBottom: 16 }}
                                 />
                                 <Table columns={userColumns} dataSource={filteredUsers} rowKey="UserID" />
                                 <Modal
@@ -272,15 +272,14 @@ const AccessManagementPage = () => {
                                 >
                                     <Button
                                         type="primary"
+                                        className="permission-button"
                                         onClick={() => {
                                             userPermForm.setFieldsValue({
                                                 userId: selectedUser?.UserID,
                                                 permissionIds: userPermissions.map((p) => p.PermissionID),
                                             });
                                             setUserPermModalVisible(true);
-                                        }}
-                                        style={{ marginBottom: 16 }}
-                                    >
+                                        }}>
                                         Assign Permission
                                     </Button>
                                     <Table
@@ -308,6 +307,7 @@ const AccessManagementPage = () => {
                                         >
                                             <Select
                                                 mode="multiple"
+                                                className="permission-select"
                                                 placeholder="Select permissions"
                                                 allowClear
                                             >
@@ -329,10 +329,10 @@ const AccessManagementPage = () => {
                         children: (
                             <>
                                 <Input.Search
+                                    className="search-bar"
                                     placeholder="Search by group name"
                                     value={searchGroup}
                                     onChange={(e) => setSearchGroup(e.target.value)}
-                                    style={{ width: 300, marginBottom: 16 }}
                                 />
                                 <Table columns={groupColumns} dataSource={filteredGroups} rowKey="GroupID" />
 
@@ -345,6 +345,7 @@ const AccessManagementPage = () => {
                                 >
                                     <Button
                                         type="primary"
+                                        className="permission-button"
                                         onClick={() => {
                                             if (!selectedGroup || !selectedGroup.GroupID) {
                                                 message.error("Group not selected properly");
@@ -358,7 +359,6 @@ const AccessManagementPage = () => {
 
                                             setGroupAssignModalVisible(true);
                                         }}
-                                        style={{ marginBottom: 16 }}
                                     >
                                         Assign Permission
                                     </Button>
@@ -386,7 +386,10 @@ const AccessManagementPage = () => {
                                             label="Select Permissions"
                                             rules={[{ required: true, message: "Please select at least one permission" }]}
                                         >
-                                            <Select mode="multiple" placeholder="Select permissions" allowClear>
+                                            <Select
+                                                mode="multiple"
+                                                className="permission-select"
+                                                placeholder="Select permissions" allowClear>
                                                 {permissions.map((permission) => (
                                                     <Select.Option key={permission.PermissionID} value={permission.PermissionID}>
                                                         {permission.PermissionName}
