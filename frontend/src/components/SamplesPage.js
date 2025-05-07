@@ -1,9 +1,15 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { Table, Button, Space, Modal, message, Image, Upload, Input, Row, Col, Select, Form, Popconfirm } from "antd";
-import { UploadOutlined, SearchOutlined } from "@ant-design/icons";
+import { Table, Button, Space, Modal, message, Image, Upload, Input, Row, Col, Select, Form, Popconfirm, DatePicker, Tag } from "antd";
+import customParseFormat from "dayjs/plugin/customParseFormat";
+import { UploadOutlined, SearchOutlined, DownloadOutlined } from "@ant-design/icons";
 import axios from "axios";
 import dayjs from "dayjs";
+import { useTranslation } from "react-i18next";
 import "../styles/SamplesPage.css"
+
+
+dayjs.extend(customParseFormat);
+
 const SamplePage = () => {
     const [samples, setSamples] = useState([]);
     const [filteredSamples, setFilteredSamples] = useState([]);
@@ -19,7 +25,9 @@ const SamplePage = () => {
     const [form] = Form.useForm();
     const [warehouses, setWarehouses] = useState([]);
     const [selectedQRCodes, setSelectedQRCodes] = useState([]);
-
+    const { t } = useTranslation();
+    const [detailModalVisible, setDetailModalVisible] = useState(false);
+    const [detailSample, setDetailSample] = useState(null);
 
     const fetchSamples = useCallback(async () => {
         setLoading(true);
@@ -97,7 +105,6 @@ const SamplePage = () => {
                         </style>
                     </head>
                     <body>
-                        <h2>Mã QR - ${currentSample?.SerialNumber}</h2>
                         ${qrCodes.map(src => `<img src="${src}" />`).join("")}
                     </body>
                 </html>
@@ -140,6 +147,7 @@ const SamplePage = () => {
         formData.append("file", file);
 
         try {
+            // Import mà không lấy cột SerialNumber
             await axios.post(`${API_BASE}/samples/import`, formData, {
                 headers: { "Content-Type": "multipart/form-data" }
             });
@@ -171,63 +179,81 @@ const SamplePage = () => {
             setFilteredSamples(samples);
         }
     };
-
     const columns = [
-        { title: "序號", dataIndex: "SerialNumber" },
-        { title: "品牌", dataIndex: "Brand" },
-        { title: "BU", dataIndex: "BU" },
-        { title: "季节", dataIndex: "Season" },
-        { title: "款号", dataIndex: "ItemCode" },
-        { title: "Working NO.", dataIndex: "WorkingNO" },
-        { title: "Article NO.", dataIndex: "ArticleNO" },
-        { title: "輪次", dataIndex: "Round" },
-        { title: "通知生產數量", dataIndex: "NotifyProductionQuantity" },
         {
-            title: "通知日期",
+            title: "Serial Number",
+            render: (_, __, index) => index + 1,
+        },
+        { title: t("brand"), dataIndex: "Brand" },
+        { title: "BU", dataIndex: "BU" },
+        { title: t("season"), dataIndex: "Season" },
+        { title: t("itemCode"), dataIndex: "ItemCode" },
+        { title: t("workingNo."), dataIndex: "WorkingNO" },
+        { title: t("articleNo."), dataIndex: "ArticleNO" },
+        { title: t("round"), dataIndex: "Round" },
+        { title: t("notifyProductQuantity"), dataIndex: "NotifyProductionQuantity" },
+        {
+            title: t("notificationDate"),
             dataIndex: "DateInform",
             render: (text) => {
                 const date = new Date(text);
-                return isNaN(date)
-                    ? "Không hợp lệ"
-                    : dayjs(date).format("M/D/YYYY");
+                return isNaN(date) ? t("invalidDate") : dayjs(date).format("MM/DD/YYYY");
             }
         },
-        { title: "庫存數量", dataIndex: "Quantity" },
-        { title: "庫存位置", dataIndex: "InventoryLocation" },
-        { title: "狀態", dataIndex: "State" },
-        { title: "已借出", dataIndex: "BorrowedQuantity" },
+        { title: t("stockQuantity"), dataIndex: "Quantity" },
+        { title: t("location"), dataIndex: "InventoryLocation" },
         {
-            title: "操作",
+            title: t("state"),
+            dataIndex: "State",
+            render: (state) => {
+                let color = "red";
+                if (state === "Available") {
+                    color = "green";
+                }
+                return <Tag color={color} style={{ fontWeight: "bold" }}>{state}</Tag>;
+            }
+        },
+        { title: t("borrowed"), dataIndex: "BorrowedQuantity" },
+        {
+            title: t("action"),
             render: (_, record) => (
                 <Space>
-                    <Button type="link" onClick={() => {
+                    <Button type="primary" onClick={(e) => {
+                        e.stopPropagation();
                         setEditingSample(record);
                         form.setFieldsValue({
                             ...record,
+                            DateInform: record.DateInform ? dayjs(record.DateInform) : null,
                             WarehouseID: warehouses.find(w => w.WarehouseName === record.InventoryLocation)?.WarehouseID
                         });
-
                         setFormVisible(true);
                     }}>
-                        Modify
+                        {t("edit")}
                     </Button>
                     <Popconfirm
-                        title="Are you sure to delete this user?"
+                        title={t("deleteConfirm")}
                         onConfirm={() => handleDelete(record.SampleID)}
-                        okText="Yes"
-                        cancelText="No"
+                        okText={t("yes")}
+                        cancelText={t("no")}
+                        onClick={(e) => e.stopPropagation()}
                     >
-                        <Button type="danger">Delete</Button>
+                        <Button danger >{t("delete")}</Button>
                     </Popconfirm>
-                    <Button type="link" onClick={() => handleGenerateQR(record)}>Generate QR code</Button>
+                    <Button type="primary" onClick={(e) => {
+                        e.stopPropagation();
+                        handleGenerateQR(record);
+                    }}>
+                        {t("generate")}
+                    </Button>
                 </Space>
             )
         }
     ];
 
+
     return (
         <div className="sample-page">
-            <h3>Sample List</h3>
+            <h3>{t("sample")}</h3>
 
             <Row gutter={16} style={{ marginBottom: 16 }}>
                 <Col>
@@ -236,17 +262,16 @@ const SamplePage = () => {
                         onChange={handleSearchColumnChange}
                         style={{ width: 160 }}
                         options={[
-                            { label: "Serial Number", value: "SerialNumber" },
-                            { label: "Brand", value: "Brand" },
+                            { label: t("brand"), value: "Brand" },
                             { label: "BU", value: "BU" },
-                            { label: "Season", value: "Season" },
-                            { label: "Item Code", value: "ItemCode" }
+                            { label: t("season"), value: "Season" },
+                            { label: t("itemCode"), value: "ItemCode" }
                         ]}
                     />
                 </Col>
                 <Col>
                     <Input
-                        placeholder={`Tìm theo ${searchColumn}`}
+                        placeholder={`${t("search")} ${searchColumn}`}
                         prefix={<SearchOutlined />}
                         value={searchValue}
                         onChange={(e) => handleSearch(e.target.value)}
@@ -259,14 +284,26 @@ const SamplePage = () => {
                         form.resetFields();
                         setFormVisible(true);
                     }}>
-                        ADD Sample
+                        {t("add")} {t("sample")}
                     </Button>
                 </Col>
 
                 <Col>
                     <Upload beforeUpload={handleImport} showUploadList={false}>
-                        <Button icon={<UploadOutlined />}>Import Excel</Button>
+                        <Button type="primary" icon={<UploadOutlined />}>{t("import")}</Button>
                     </Upload>
+                </Col>
+
+                <Col>
+                    <a
+                        href="/templates/Book2.xlsx"
+                        download
+                    >
+                        <Button icon={<DownloadOutlined />}>
+                            {t("downloadTemplate")}
+                        </Button>
+                    </a>
+
                 </Col>
             </Row>
 
@@ -277,10 +314,41 @@ const SamplePage = () => {
                 dataSource={filteredSamples}
                 loading={loading}
                 pagination={{ pageSize: 10 }}
+                onRow={(record) => ({
+                    onClick: () => {
+                        setDetailSample(record);
+                        setDetailModalVisible(true);
+                    }
+                })}
             />
-
+            {/* Detail Modal */}
             <Modal
-                title={`Mã QR - ${currentSample?.SerialNumber}`}
+                title={`Chi tiết Sample – ${detailSample?.SerialNumber}`}
+                open={detailModalVisible}
+                onCancel={() => setDetailModalVisible(false)}
+                footer={null}
+            >
+                {detailSample && (
+                    <div style={{ lineHeight: 1.8 }}>
+                        <p><strong>SerialNumber:</strong> {detailSample.SerialNumber}</p>
+                        <p><strong>Brand:</strong> {detailSample.Brand}</p>
+                        <p><strong>BU:</strong> {detailSample.BU}</p>
+                        <p><strong>Season:</strong> {detailSample.Season}</p>
+                        <p><strong>ItemCode:</strong> {detailSample.ItemCode}</p>
+                        <p><strong>WorkingNO:</strong> {detailSample.WorkingNO}</p>
+                        <p><strong>ArticleNO:</strong> {detailSample.ArticleNO}</p>
+                        <p><strong>Round:</strong> {detailSample.Round}</p>
+                        <p><strong>NotifyProductionQuantity:</strong> {detailSample.NotifyProductionQuantity}</p>
+                        <p><strong>DateInform:</strong> {detailSample.DateInform}</p>
+                        <p><strong>Quantity:</strong> {detailSample.Quantity}</p>
+                        <p><strong>InventoryLocation:</strong> {detailSample.InventoryLocation}</p>
+                        <p><strong>State:</strong> {detailSample.State}</p>
+                        <p><strong>BorrowedQuantity:</strong> {detailSample.BorrowedQuantity}</p>
+                    </div>
+                )}
+            </Modal>
+            <Modal
+                title={`${t("generate")} - ${currentSample?.SerialNumber}`}
                 open={qrModalVisible}
                 onCancel={() => {
                     setQrModalVisible(false);
@@ -295,6 +363,9 @@ const SamplePage = () => {
                             <Col key={idx}>
                                 <div style={{ textAlign: "center" }}>
                                     <Image src={src} width={120} />
+                                    <div style={{ marginTop: 4, fontSize: 12 }}>
+                                        {currentSample?.ItemCode} | {idx + 1}
+                                    </div>
                                     <div>
                                         <input
                                             type="checkbox"
@@ -306,11 +377,13 @@ const SamplePage = () => {
                                                     setSelectedQRCodes(selectedQRCodes.filter(qr => qr !== src));
                                                 }
                                             }}
-                                        /> Chọn in
+                                        />
                                     </div>
                                 </div>
                             </Col>
                         ))}
+
+
                     </Row>
 
                     <Space style={{ marginTop: 24 }}>
@@ -319,26 +392,27 @@ const SamplePage = () => {
                             onClick={() => handlePrintSelectedQRCodes()}
                             disabled={selectedQRCodes.length === 0}
                         >
-                            Print selected QR codes
+                            {t("printSelectedQR")}
                         </Button>
                         <Button
                             type="primary"
                             style={{ backgroundColor: '#64cacf', borderColor: '#64cacf' }}
                             onClick={() => handlePrintAllQRCodes()}
                         >
-                            Print all QR codes
+                            {t("printAllQR")}
                         </Button>
+
                     </Space>
                 </div>
             </Modal>
 
 
             <Modal
-                title={editingSample ? "Modify" : "ADD"}
+                title={editingSample ? t("edit") : `${t("add")} ${t("sample")}`}
                 open={formVisible}
                 onCancel={() => setFormVisible(false)}
                 onOk={() => form.submit()}
-                okText={editingSample ? "Save changes" : "ADD"}
+                okText={editingSample ? t("saveChanges") : t("add")}
             >
                 <Form
                     form={form}
@@ -355,7 +429,7 @@ const SamplePage = () => {
                             articleNO: values.ArticleNO,
                             round: values.Round,
                             notifyProductionQuantity: parseInt(values.NotifyProductionQuantity),
-                            dateInform: values.DateInform,
+                            dateInform: values.DateInform ? values.DateInform.toISOString() : null,
                             quantity: parseInt(values.Quantity),
                             inventoryLocation: warehouses.find(w => w.WarehouseID === values.WarehouseID)?.WarehouseName || '',
                             warehouseID: values.WarehouseID,
@@ -379,45 +453,43 @@ const SamplePage = () => {
                         }
                     }}
                 >
-                    <Form.Item label="序號" name="SerialNumber" rules={[{ required: true }]}>
-                        <Input />
-                    </Form.Item>
-                    <Form.Item label="品牌" name="Brand" rules={[{ required: true }]}>
+
+                    <Form.Item label={t("brand")} name="Brand" rules={[{ required: true }]}>
                         <Input />
                     </Form.Item>
                     <Form.Item label="BU" name="BU">
                         <Input />
                     </Form.Item>
-                    <Form.Item label="季节" name="Season">
+                    <Form.Item label={t("season")} name="Season">
                         <Input />
                     </Form.Item>
-                    <Form.Item label="款号" name="ItemCode">
+                    <Form.Item label={t("itemCode")} name="ItemCode">
                         <Input />
                     </Form.Item>
-                    <Form.Item label="Working NO." name="WorkingNO">
+                    <Form.Item label={t("workingNo.")} name="WorkingNO">
                         <Input />
                     </Form.Item>
-                    <Form.Item label="Article NO." name="ArticleNO">
+                    <Form.Item label={t("articleNo.")} name="ArticleNO">
                         <Input />
                     </Form.Item>
-                    <Form.Item label="輪次" name="Round">
+                    <Form.Item label={t("round")} name="Round">
                         <Input />
                     </Form.Item>
-                    <Form.Item label="通知生產數量" name="NotifyProductionQuantity">
+                    <Form.Item label={t("notifyProductQuantity")} name="NotifyProductionQuantity">
                         <Input type="number" />
                     </Form.Item>
-                    <Form.Item label="通知日期" name="DateInform">
-                        <Input />
+                    <Form.Item label={t("notificationDate")} name="DateInform">
+                        <DatePicker format="DD/MM/YYYY" style={{ width: "100%" }} />
                     </Form.Item>
-                    <Form.Item label="庫存數量" name="Quantity" rules={[{ required: true }]}>
+                    <Form.Item label={t("stockQuantity")} name="Quantity" rules={[{ required: true }]}>
                         <Input type="number" />
                     </Form.Item>
                     <Form.Item
-                        label="庫存位置"
+                        label={t("location")}
                         name="WarehouseID"
-                        rules={[{ required: true, message: "Vui lòng chọn vị trí kho" }]}
+                        rules={[{ required: true, message: t("selectWarehouse") }]}
                     >
-                        <Select placeholder="Chọn vị trí kho">
+                        <Select placeholder={t("selectWarehouse")}>
                             {warehouses.map((wh) => (
                                 <Select.Option key={wh.WarehouseID} value={wh.WarehouseID}>
                                     {wh.WarehouseName}
@@ -425,6 +497,7 @@ const SamplePage = () => {
                             ))}
                         </Select>
                     </Form.Item>
+
 
                 </Form>
             </Modal>

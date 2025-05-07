@@ -10,6 +10,7 @@ import {
     Select,
 } from "antd";
 import axios from "axios";
+import { useTranslation } from "react-i18next";
 import "../styles/AccessManagementPage.css";
 
 const AccessManagementPage = () => {
@@ -32,6 +33,7 @@ const AccessManagementPage = () => {
     const [userPermManageModalVisible, setUserPermManageModalVisible] = useState(false);
     const [groupAssignModalVisible, setGroupAssignModalVisible] = useState(false);
     const API_BASE = process.env.REACT_APP_API_BASE || "/api";
+    const { t } = useTranslation();
 
     const fetchUsers = useCallback(async () => {
         try {
@@ -185,21 +187,21 @@ const AccessManagementPage = () => {
     };
 
     const userColumns = [
-        { title: "Full Name", dataIndex: "FullName", key: "FullName" },
-        { title: "Username", dataIndex: "Username", key: "Username" },
+        { title: t("fullname"), dataIndex: "FullName", key: "FullName" },
+        { title: t("username"), dataIndex: "Username", key: "Username" },
         {
-            title: "Action",
+            title: t("action"),
             key: "action",
             render: (_, record) => (
                 <Button className="permission-button" type="primary" onClick={() => handleUserSelect(record)}>
-                    Manage Permissions
+                    {t("managePermission")}
                 </Button>
             ),
         },
     ];
 
     const userPermissionsColumns = [
-        { title: "Permission", dataIndex: "PermissionName", key: "PermissionName" },
+        { title: t("permission"), dataIndex: "PermissionName", key: "PermissionName" },
         {
             title: "Action",
             key: "action",
@@ -208,36 +210,36 @@ const AccessManagementPage = () => {
                     type="danger"
                     onClick={() => handleRemovePermissionFromUser(selectedUser.UserID, record.PermissionID)}
                 >
-                    Remove
+                    {t("delete")}
                 </Button>
             ),
         },
     ];
 
     const groupColumns = [
-        { title: "Group Name", dataIndex: "GroupName", key: "GroupName" },
+        { title: t("groupName"), dataIndex: "GroupName", key: "GroupName" },
         {
-            title: "Action",
+            title: t("action"),
             key: "action",
             render: (_, record) => (
                 <Button className="permission-button" onClick={() => handleGroupSelect(record)}>
-                    Manage Permissions
+                    {t("accessmanagement")}
                 </Button>
             ),
         },
     ];
 
     const groupPermissionsColumns = [
-        { title: "Permission", dataIndex: "PermissionName", key: "PermissionName" },
+        { title: t("permission"), dataIndex: "PermissionName", key: "PermissionName" },
         {
-            title: "Action",
+            title: t("action"),
             key: "action",
             render: (_, record) => (
                 <Button
                     danger
                     onClick={() => handleRemovePermissionFromGroup(selectedGroup.GroupID, record.PermissionID)}
                 >
-                    Remove
+                    {t("delete")}
                 </Button>
             ),
         },
@@ -245,7 +247,7 @@ const AccessManagementPage = () => {
 
     return (
         <div className="access-page-container">
-            <h2 className="access-page-title">Access Management</h2>
+            <h2 className="access-page-title">{t("accessmanagement")}</h2>
             <Tabs
                 activeKey={activeTab}
                 onChange={setActiveTab}
@@ -253,7 +255,7 @@ const AccessManagementPage = () => {
                 items={[
                     {
                         key: "userPermissions",
-                        label: "User Permissions",
+                        label: t("userPermission"),
                         children: (
                             <>
                                 <Input.Search
@@ -280,7 +282,7 @@ const AccessManagementPage = () => {
                                             });
                                             setUserPermModalVisible(true);
                                         }}>
-                                        Assign Permission
+                                        {t("assign")}
                                     </Button>
                                     <Table
                                         columns={userPermissionsColumns}
@@ -325,7 +327,7 @@ const AccessManagementPage = () => {
                     },
                     {
                         key: "groupPermissions",
-                        label: "Group Permissions",
+                        label: t("groupPermission"),
                         children: (
                             <>
                                 <Input.Search
@@ -360,7 +362,7 @@ const AccessManagementPage = () => {
                                             setGroupAssignModalVisible(true);
                                         }}
                                     >
-                                        Assign Permission
+                                        {t("assign")}
                                     </Button>
 
                                     <Table

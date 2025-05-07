@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import { Table, Button, Modal, Form, Input, message, Popconfirm } from "antd";
 import axios from "axios";
 import "../styles/WarehouseManagementPage.css";
+import { useTranslation } from "react-i18next";
 
 const WarehouseManagementPage = () => {
     const [warehouses, setWarehouses] = useState([]);
@@ -11,6 +12,7 @@ const WarehouseManagementPage = () => {
     const [form] = Form.useForm();
     const [searchTerm, setSearchTerm] = useState("");
     const API_BASE = process.env.REACT_APP_API_BASE || "/api";
+    const { t } = useTranslation();
 
     const fetchWarehouses = useCallback(async () => {
         setLoading(true);
@@ -77,17 +79,17 @@ const WarehouseManagementPage = () => {
 
     const columns = [
         {
-            title: "Warehouse Name",
+            title: t("warehouseName"),
             dataIndex: "WarehouseName",
             key: "WarehouseName",
         },
         {
-            title: "Actions",
+            title: t("action"),
             key: "actions",
             render: (_, record) => (
                 <>
                     <Button type="primary" style={{ marginRight: 8 }} onClick={() => openEdit(record)}>
-                        Edit
+                        {t("edit")}
                     </Button>
                     <Popconfirm
                         title="Are you sure to delete this warehouse?"
@@ -96,7 +98,7 @@ const WarehouseManagementPage = () => {
                         cancelText="No"
                     >
                         <Button type="danger">
-                            Delete
+                            {t("delete")}
                         </Button>
 
                     </Popconfirm>
@@ -107,9 +109,9 @@ const WarehouseManagementPage = () => {
 
     return (
         <div className="warehouse-management" style={{ padding: 20 }}>
-            <h2>Warehouse Management</h2>
+            <h2>{t("warehouse")}</h2>
             <Button className="add-warehouse-button" type="primary" onClick={() => setModalVisible(true)} style={{ marginBottom: 16 }}>
-                Add Warehouse
+                {t("add")}
             </Button>
             <Input
                 className="warehouse-search"
@@ -128,7 +130,7 @@ const WarehouseManagementPage = () => {
             />
 
             <Modal
-                title={editingWarehouse ? "Edit Warehouse" : "Add Warehouse"}
+                title={editingWarehouse ? t("edit") : t("add")}
                 open={modalVisible}
                 onCancel={() => {
                     setModalVisible(false);
@@ -140,7 +142,7 @@ const WarehouseManagementPage = () => {
                 <Form form={form} layout="vertical" onFinish={handleSubmit}>
                     <Form.Item
                         name="WarehouseName"
-                        label="Warehouse Name"
+                        label={t("warehouseName")}
                         rules={[{ required: true, message: "Please input warehouse name" }]}
                     >
                         <Input placeholder="Enter warehouse name" />

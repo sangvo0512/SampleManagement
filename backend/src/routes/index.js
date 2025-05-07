@@ -12,6 +12,7 @@ const borrowReturnExportRoutes = require("./borrowReturnExport");
 const departmentRoutes = require("./departments");
 const operationCodesRoutes = require("./operationCode");
 const warehouseRoutes = require("./warehouse");
+const transactionRoutes = require("./transaction");
 // Gắn các route con vào route chính
 
 router.use("/auth", authRoutes);
@@ -24,6 +25,7 @@ router.use("/permissions", permissionsRoutes);
 router.use("/departments", departmentRoutes);
 router.use("/operationCode", operationCodesRoutes);
 router.use("/warehouses", warehouseRoutes);
+router.use("/transaction", transactionRoutes);
 router.use("/", borrowReturnExportRoutes);
 
 

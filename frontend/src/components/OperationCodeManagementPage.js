@@ -3,6 +3,7 @@ import axios from "axios";
 import { Table, Button, Modal, Input, Form, message, Popconfirm } from "antd";
 import { useAuth } from "../context/AuthContext";
 import "../styles/OperationCodeManagementPage.css"
+import { useTranslation } from "react-i18next";
 
 const OperationCodeManagementPage = () => {
     const { user } = useAuth();
@@ -11,6 +12,7 @@ const OperationCodeManagementPage = () => {
     const [editingCode, setEditingCode] = useState(null);
     const [form] = Form.useForm();
     const API_BASE = process.env.REACT_APP_API_BASE || "/api";
+    const { t } = useTranslation();
 
     const fetchOperationCodes = useCallback(
         async () => {
@@ -69,20 +71,20 @@ const OperationCodeManagementPage = () => {
 
 
     const columns = [
-        { title: "Reason", dataIndex: "ReasonDetail", key: "ReasonDetail" },
+        { title: t("operationCode"), dataIndex: "ReasonDetail", key: "ReasonDetail" },
         ...(isIT ? [{
-            title: "Actions",
+            title: t("action"),
             key: "actions",
             render: (_, record) => (
                 <>
-                    <Button onClick={() => handleEdit(record)} type="primary" style={{ marginRight: 8 }}>Edit</Button>
+                    <Button onClick={() => handleEdit(record)} type="primary" style={{ marginRight: 8 }}>{t("edit")}</Button>
                     <Popconfirm
                         title="Are you sure to delete this operation code?"
                         onConfirm={() => handleDelete(record.ReasonID)}
                         okText="Yes"
                         cancelText="No"
                     >
-                        <Button type="danger">Delete</Button>
+                        <Button type="danger">{t("delete")}</Button>
                     </Popconfirm>
 
                 </>
@@ -95,12 +97,12 @@ const OperationCodeManagementPage = () => {
 
     return (
         <div className="operationCode-management">
-            <h2>Operation Code Management</h2>
-            {isIT && <Button type="primary" onClick={handleAdd} className="add-operationCode-management-button" style={{ marginBottom: 16 }}>Add</Button>}
+            <h2>{t("operationCode")}</h2>
+            {isIT && <Button type="primary" onClick={handleAdd} className="add-operationCode-management-button" style={{ marginBottom: 16 }}>{t("add")}</Button>}
             <Table columns={columns} className="operationCode-management-table" dataSource={operationCodes} rowKey="ReasonID" />
 
             <Modal
-                title={editingCode ? "Edit Reason" : "Add Reason"}
+                title={editingCode ? t("edit") : t("add")}
                 open={isModalVisible}
                 onCancel={() => setIsModalVisible(false)}
                 onOk={() => form.submit()}
@@ -108,7 +110,7 @@ const OperationCodeManagementPage = () => {
                 <Form form={form} onFinish={handleSave} layout="vertical">
                     <Form.Item
                         name="reasonDetail"
-                        label="Reason"
+                        label={t("operationCode")}
                         rules={[{ required: true, message: "Please enter reason detail" }]}
                     >
                         <Input />

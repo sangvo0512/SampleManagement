@@ -1,7 +1,7 @@
 // src/routes/borrowReturnExport.js
 const express = require("express");
 const router = express.Router();
-const BorrowReturnExportController = require("../controllers/BorrowReturnExportHistoryController");
+const BorrowReturnExportController = require("../controllers/BorrowReturnExportController");
 
 // Endpoint cho mượn/transfer: POST /api/borrow
 router.post("/borrow", BorrowReturnExportController.borrowOrTransfer);

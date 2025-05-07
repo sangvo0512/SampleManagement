@@ -25,14 +25,13 @@
 }
 
 .system-container .card:hover {
-    transform: translateY(-4px);
+    transform: scale(1.05);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .system-container .card-icon {
     width: 50px;
     height: 50px;
-    margin-bottom: 1rem;
     color: #e67e22;
 }
 
@@ -42,21 +41,8 @@
     color: #333;
 }
 
-.system-container .card button {
-    background-color: #e67e22;
-    color: #fff;
-    border: none;
-    border-radius: 4px;
-    padding: 0.5rem 1rem;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-}
-
-.system-container .card button:hover {
-    background-color: #d65a1f;
-}
-
-.system-container .card button a {
-    color: inherit;
+.system-container .card-link {
     text-decoration: none;
+    color: inherit;
+    display: block;
 }

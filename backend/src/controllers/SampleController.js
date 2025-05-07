@@ -14,7 +14,9 @@ class SampleController {
 
     static async createSample(req, res) {
         try {
-            const sampleId = await SampleModel.createSample(req.body);
+            const sampleData = { ...req.body };
+            sampleData.state = (Number(sampleData.quantity) === 0) ? 'Unavailable' : 'Available';
+            const sampleId = await SampleModel.createSample(sampleData);
             res.status(201).json({ message: "Sample created successfully", sampleId });
         } catch (err) {
             res.status(500).json({ error: err.message, stack: err.stack });
@@ -24,7 +26,9 @@ class SampleController {
     static async updateSample(req, res) {
         try {
             const { id } = req.params;
-            const rowsAffected = await SampleModel.updateSample(id, req.body);
+            const sampleData = { ...req.body };
+            sampleData.state = (Number(sampleData.quantity) === 0) ? 'Unavailable' : 'Available';
+            const rowsAffected = await SampleModel.updateSample(id, sampleData);
             if (rowsAffected === 0) {
                 return res.status(404).json({ message: "Sample not found" });
             }
@@ -53,12 +57,10 @@ class SampleController {
                 return res.status(400).json({ message: "No file uploaded" });
             }
 
-            // 1. Đọc file Excel
             const workbook = xlsx.readFile(req.file.path);
             const sheetName = workbook.SheetNames[0];
             const rawData = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName]);
 
-            // 2. Lấy danh sách kho từ DB để map tên → ID
             const pool = await poolPromise;
             const warehouseResult = await pool.request()
                 .query("SELECT WarehouseID, WarehouseName FROM Warehouses");
@@ -71,7 +73,6 @@ class SampleController {
             const success = [];
             const errors = [];
 
-            // 3. Duyệt từng dòng Excel
             for (const row of rawData) {
                 try {
                     const warehouseName = row["庫存位置"]?.trim();
@@ -83,7 +84,6 @@ class SampleController {
                     }
 
                     const sampleData = {
-                        serialNumber: row["序號"]?.toString(),
                         brand: row["品牌"],
                         BU: row["BU"],
                         season: row["季节"],
@@ -105,17 +105,18 @@ class SampleController {
                             }
                             return new Date();
                         })(),
-
                         inventoryLocation: warehouseName,
                         warehouseID,
                         state: 'Available',
                         borrowdQuantity: 0
                     };
 
-                    if (!sampleData.serialNumber || !sampleData.brand || !sampleData.articleNO) {
-                        errors.push({ row, error: "Thiếu trường bắt buộc (SerialNumber / Brand / ArticleNO)" });
+                    if (!sampleData.brand || !sampleData.articleNO) {
+                        errors.push({ row, error: "Thiếu trường bắt buộc (Brand / ArticleNO)" });
                         continue;
                     }
+
+                    sampleData.state = (sampleData.quantity === 0) ? 'Unavailable' : 'Available';
 
                     const insertedId = await SampleModel.createSample(sampleData);
                     success.push({ ...sampleData, insertedId });
@@ -134,6 +135,7 @@ class SampleController {
             res.status(500).json({ error: err.message });
         }
     }
+
 
 
 

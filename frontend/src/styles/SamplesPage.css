@@ -2,7 +2,6 @@
 .sample-page {
     background-color: #fffcf7;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    padding: 24px;
     padding: 2rem;
     min-height: 100vh;
 }
@@ -30,16 +29,14 @@
     background-color: #ffffff;
     border-radius: 12px;
     padding: 12px;
+    overflow-x: auto;
 }
 
 .sample-page .ant-form-item {
     margin-bottom: 16px;
 }
 
-.sample-page .ant-select-selector {
-    border-radius: 8px !important;
-}
-
+.sample-page .ant-select-selector,
 .sample-page .ant-input {
     border-radius: 8px !important;
 }
@@ -58,7 +55,6 @@
     background-color: #fff;
     border-radius: 8px;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-    overflow: hidden;
 }
 
 /* Header của bảng */
@@ -66,4 +62,38 @@
     background-color: #e9ecef;
     color: #333;
     font-weight: 600;
+}
+
+/* Responsive cho các thiết bị nhỏ hơn */
+@media (max-width: 768px) {
+    .sample-page {
+        padding: 1rem;
+    }
+
+    .sample-page h3 {
+        font-size: 1.4rem;
+    }
+
+    .sample-page .ant-row {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .sample-page .ant-col {
+        width: 100% !important;
+    }
+
+    .sample-page-table {
+        overflow-x: auto;
+    }
+
+    .sample-page .ant-modal {
+        width: 95% !important;
+        max-width: 100% !important;
+    }
+
+    .sample-page .ant-btn {
+        width: 100%;
+    }
 }

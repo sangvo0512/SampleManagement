@@ -2,9 +2,12 @@ import React, { useEffect, useState, useCallback } from "react";
 import { Table, Button, Modal, Input, Form, message, AutoComplete, Popconfirm } from "antd";
 import axios from "axios";
 import "../styles/GroupManagementPage.css";
+import { useTranslation } from "react-i18next";
 
 const GroupManagementPage = () => {
     const API_BASE = process.env.REACT_APP_API_BASE || "/api";
+    const { t } = useTranslation();
+
 
     // State cho danh sách nhóm và loading
     const [groups, setGroups] = useState([]);
@@ -157,22 +160,22 @@ const GroupManagementPage = () => {
 
     // Các cột cho bảng nhóm
     const groupColumns = [
-        { title: "Group Name", dataIndex: "GroupName", key: "GroupName" },
+        { title: t("groupName"), dataIndex: "GroupName", key: "GroupName" },
         {
-            title: "Actions",
+            title: t("action"),
             key: "action",
             render: (text, record) => (
                 <>
                     <Button type="primary" style={{ marginRight: 8 }} onClick={() => openEditGroup(record)}>
-                        Edit
+                        {t("edit")}
                     </Button>
                     <Popconfirm
-                        title="Are you sure to delete this group?"
+                        title={t("groupConfirm")}
                         onConfirm={() => handleDeleteGroup(record.GroupID)}
-                        okText="Yes"
-                        cancelText="No"
+                        okText="Y"
+                        cancelText="N"
                     ><Button type="danger" >
-                            Delete
+                            {t("delete")}
                         </Button>
 
                     </Popconfirm>
@@ -184,15 +187,15 @@ const GroupManagementPage = () => {
 
     // Các cột cho bảng thành viên của nhóm
     const groupUsersColumns = [
-        { title: "Full Name", dataIndex: "FullName", key: "FullName" },
-        { title: "Username", dataIndex: "Username", key: "Username" },
-        { title: "Email", dataIndex: "Email", key: "Email" },
+        { title: t("fullname"), dataIndex: "FullName", key: "FullName" },
+        { title: t("username"), dataIndex: "Username", key: "Username" },
+        { title: t("email"), dataIndex: "Email", key: "Email" },
         {
-            title: "Action",
+            title: t("action"),
             key: "action",
             render: (text, record) => (
                 <Button type="danger" onClick={() => handleRemoveUserFromGroup(editingGroup.GroupID, record.UserID)}>
-                    Remove
+                    {t("delete")}
                 </Button>
             ),
         },
@@ -201,7 +204,7 @@ const GroupManagementPage = () => {
     return (
         <div className="group-management">
             <div style={{ padding: 20 }}>
-                <h2>Group Management</h2>
+                <h2>{t("groups")}</h2>
                 <Button
                     className="add-group-button"
                     type="primary"
@@ -213,14 +216,14 @@ const GroupManagementPage = () => {
                     }}
                     style={{ marginBottom: 16 }}
                 >
-                    Add Group
+                    {t("add")}
                 </Button>
                 <Table columns={groupColumns} dataSource={groups} rowKey="GroupID" loading={loading} />
 
                 {/* Modal tạo/chỉnh sửa nhóm */}
                 <Modal
                     className="modal-custom"
-                    title={editingGroup ? "Edit Group" : "Add Group"}
+                    title={editingGroup ? t("edit") : t("add")}
                     open={groupModalVisible}
                     onCancel={() => {
                         setGroupModalVisible(false);
@@ -233,7 +236,7 @@ const GroupManagementPage = () => {
                     <Form form={groupForm} layout="vertical" onFinish={handleGroupSubmit}>
                         <Form.Item
                             name="groupName"
-                            label="Group Name"
+                            label={t("groupName")}
                             rules={[{ required: true, message: "Please enter group name" }]}
                         >
                             <Input placeholder="Enter group name" />
@@ -241,10 +244,10 @@ const GroupManagementPage = () => {
                     </Form>
                     {editingGroup && (
                         <div style={{ marginTop: 20 }}>
-                            <h3>Group Members</h3>
+                            <h3>{t("groupMember")}</h3>
                             <Table columns={groupUsersColumns} dataSource={groupUsers} rowKey="UserID" size="small" pagination={false} />
                             <Button type="dashed" onClick={() => setAddUserModalVisible(true)} style={{ marginTop: 10 }}>
-                                Add User
+                                {t("add")}
                             </Button>
                         </div>
                     )}

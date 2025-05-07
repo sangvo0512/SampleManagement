@@ -3,6 +3,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import axios from "axios";
 import { Table, Button, Modal, Input, Form, Popconfirm } from "antd";
 import "../styles/DepartmentManagementPage.css";
+import { useTranslation } from "react-i18next";
 
 const DepartmentManagement = () => {
     const [departments, setDepartments] = useState([]);
@@ -11,6 +12,8 @@ const DepartmentManagement = () => {
     const [editingDepartment, setEditingDepartment] = useState(null);
     const [form] = Form.useForm();
     const API_BASE = process.env.REACT_APP_API_BASE || "/api";
+    const { t } = useTranslation();
+
     const fetchDepartments = useCallback(
         async () => {
             setLoading(true);
@@ -70,14 +73,14 @@ const DepartmentManagement = () => {
     };
 
     const columns = [
-        { title: "Department Name", dataIndex: "DepartmentName", key: "DepartmentName" },
+        { title: t("departmentName"), dataIndex: "DepartmentName", key: "DepartmentName" },
         {
-            title: "Actions",
+            title: t("action"),
             key: "actions",
             render: (_, record) => (
                 <>
                     <Button onClick={() => handleEdit(record)} type="primary" style={{ marginRight: 8 }}>
-                        Edit
+                        {t("edit")}
                     </Button>
                     <Popconfirm
                         title="Are you sure to delete this department?"
@@ -86,7 +89,7 @@ const DepartmentManagement = () => {
                         cancelText="No"
                     >
                         <Button type="danger">
-                            Delete
+                            {t("delete")}
                         </Button>
 
                     </Popconfirm>
@@ -98,8 +101,8 @@ const DepartmentManagement = () => {
 
     return (
         <div className="department-management">
-            <h2>Department Management</h2>
-            <Button type="primary" onClick={handleAdd} className="add-department-button">Add</Button>
+            <h2>{t("departments")}</h2>
+            <Button type="primary" onClick={handleAdd} className="add-department-button">{t("add")}</Button>
             <Table
                 className="department-management-table"
                 columns={columns}
@@ -109,7 +112,7 @@ const DepartmentManagement = () => {
             />
 
             <Modal
-                title={editingDepartment ? "Edit Department" : "Add Department"}
+                title={editingDepartment ? t("edit") : t("add")}
                 open={isModalVisible}
                 onCancel={() => setIsModalVisible(false)}
                 onOk={() => form.submit()}
@@ -118,7 +121,7 @@ const DepartmentManagement = () => {
                 <Form form={form} onFinish={handleSave} layout="vertical">
                     <Form.Item
                         name="departmentName"
-                        label="Department Name"
+                        label={t("departmentName")}
                         rules={[{ required: true, message: "Please enter department name" }]}
                     >
                         <Input />

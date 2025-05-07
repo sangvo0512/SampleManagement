@@ -22,7 +22,16 @@ export const PermissionProvider = ({ children }) => {
     const fetchPermissionsFromServer = async (userId) => {
         try {
             const res = await axios.get(`/api/permissions/effective/${userId}`);
-            const permissionKeys = res.data.map(p => p.PermissionKey);
+            console.log("Permissions API response:", res.data); // 👈 log kiểm tra
+
+            const rawData = res.data;
+            const permissionArray = Array.isArray(rawData)
+                ? rawData
+                : Array.isArray(rawData.permissions) // nếu data nằm trong field `permissions`
+                    ? rawData.permissions
+                    : [];
+
+            const permissionKeys = permissionArray.map(p => p.PermissionKey);
             updatePermissions(permissionKeys);
         } catch (error) {
             console.error("Failed to fetch permissions:", error);

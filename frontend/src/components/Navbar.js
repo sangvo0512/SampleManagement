@@ -4,10 +4,12 @@ import { Link, useNavigate } from "react-router-dom";
 import logo from "../assets/logo-removebg-preview.jpg";
 import "../styles/Navbar.css";
 import { PermissionContext } from "../context/PermissionContext";
+import { useTranslation } from "react-i18next";
 
 const Navbar = () => {
     const navigate = useNavigate();
     const { permissions } = useContext(PermissionContext);
+    const { t } = useTranslation();
 
     const handleLogout = () => {
         localStorage.removeItem("token");
@@ -28,32 +30,29 @@ const Navbar = () => {
             <div className="nav-menu">
                 {hasPermission("sample") && (
                     <Link to="/samples" className="nav-item">
-                        Sample List
+                        {t("sample")}
                     </Link>
                 )}
                 {hasPermission("scan") && (
                     <Link to="/qr-scan" className="nav-item">
-                        Scan borrow/return/export
+                        {t("scan")}
                     </Link>
                 )}
                 {hasPermission("history") && (
                     <Link to="/history-management" className="nav-item">
-                        History
+                        {t("history")}
                     </Link>
                 )}
                 {hasPermission("system_management") && (
                     <Link to="/system-management" className="nav-item">
-                        System Management
+                        {t("systemManagement")}
                     </Link>
                 )}
             </div>
 
-            {/* Nút Đăng xuất */}
-            <div className="nav-logout">
-                <button onClick={handleLogout} className="logout-button">
-                    Log out
-                </button>
-            </div>
+            <button onClick={handleLogout} className="logout-button">
+                {t("logout")}
+            </button>
         </nav>
     );
 };

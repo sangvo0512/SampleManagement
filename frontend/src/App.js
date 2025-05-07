@@ -15,6 +15,7 @@ import AccessManagementPage from './components/AccessManagementPage';
 import GroupManagementPage from './components/GroupManagementPage';
 import WarehouseManagementPage from './components/WarehouseManagementPage';
 import HistoryManagementPage from './components/HistoryPage';
+import BorrowForm from './components/BorrowForm';
 
 import { PermissionProvider, PermissionContext } from './context/PermissionContext';
 
@@ -43,7 +44,6 @@ function App() {
           <Route element={<LayoutWithNavbar />}>
             <Route path="/dashboard" element={<HomePage />} />
             <Route path="/dashboard/main" element={<DashboardPage />} />
-
             <Route path="/samples" element={
               <RequirePermission permission="sample">
                 <SamplesPage />
@@ -53,6 +53,11 @@ function App() {
             <Route path="/qr-scan" element={
               <RequirePermission permission="scan">
                 <QRScanPage />
+              </RequirePermission>
+            } />
+            <Route path="/borrow" element={
+              <RequirePermission permission="scan">
+                <BorrowForm />
               </RequirePermission>
             } />
 

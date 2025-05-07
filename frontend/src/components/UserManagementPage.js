@@ -2,7 +2,8 @@
 import React, { useEffect, useState, useCallback } from "react";
 import axios from "axios";
 import { Select, Table, Button, Modal, Input, Form, Popconfirm } from "antd";
-import "../styles/UserManagementPage.css";  // Import file CSS
+import "../styles/UserManagementPage.css";
+import { useTranslation } from "react-i18next";
 
 const UserManagement = () => {
     const [users, setUsers] = useState([]);
@@ -13,6 +14,7 @@ const UserManagement = () => {
     const [departments, setDepartments] = useState([]);
     const [searchTerm, setSearchTerm] = useState("");
     const API_BASE = process.env.REACT_APP_API_BASE || "/api";
+    const { t } = useTranslation();
 
     const fetchUsers = useCallback(
         async () => {
@@ -86,24 +88,24 @@ const UserManagement = () => {
         us.Username.toLowerCase().includes(searchTerm.toLowerCase())
     );
     const columns = [
-        { title: "Username", dataIndex: "Username", key: "Username" },
-        { title: "Full Name", dataIndex: "FullName", key: "FullName" },
-        { title: "Email", dataIndex: "Email", key: "Email" },
-        { title: "ID Number", dataIndex: "IDNumber", key: "IDNumber" },
-        { title: "Department", dataIndex: "DepartmentName", key: "DepartmentName" },
+        { title: t("username"), dataIndex: "Username", key: "Username" },
+        { title: t("fullname"), dataIndex: "FullName", key: "FullName" },
+        { title: t("email"), dataIndex: "Email", key: "Email" },
+        { title: t("idNumber"), dataIndex: "IDNumber", key: "IDNumber" },
+        { title: t("departments"), dataIndex: "DepartmentName", key: "DepartmentName" },
         {
-            title: "Actions",
+            title: t("action"),
             key: "actions",
             render: (_, record) => (
                 <>
-                    <Button onClick={() => handleEdit(record)} type="primary" style={{ marginRight: 8 }}>Edit</Button>
+                    <Button onClick={() => handleEdit(record)} type="primary" style={{ marginRight: 8 }}>{t("edit")}</Button>
                     <Popconfirm
-                        title="Are you sure to delete this user?"
+                        title={t("userConfirm")}
                         onConfirm={() => handleDelete(record.UserID)}
-                        okText="Yes"
-                        cancelText="No"
+                        okText="Y"
+                        cancelText="N"
                     >
-                        <Button type="danger">Delete</Button>
+                        <Button type="danger">{t("delete")}</Button>
                     </Popconfirm>
 
                 </>
@@ -113,12 +115,12 @@ const UserManagement = () => {
 
     return (
         <div className="user-management">
-            <h3>User Management</h3>
+            <h3>{t("users")}</h3>
             <Button
                 className="add-user-button"
                 type="primary"
                 onClick={handleAdd}>
-                Add User
+                {t("add")}
             </Button>
             <Input
                 className="user-search"
@@ -136,7 +138,7 @@ const UserManagement = () => {
                 bordered />
 
             <Modal
-                title={editingUser ? "Edit User" : "Add User"}
+                title={editingUser ? t("edit") : t("add")}
                 open={isModalVisible}
                 onCancel={() => setIsModalVisible(false)}
                 onOk={() => form.submit()}
@@ -145,35 +147,35 @@ const UserManagement = () => {
                 <Form form={form} onFinish={handleSave} layout="vertical">
                     <Form.Item
                         name="username"
-                        label="Username"
+                        label={t("username")}
                         rules={[{ required: true, message: "Please enter username" }]}
                     >
                         <Input disabled={editingUser ? true : false} />
                     </Form.Item>
                     <Form.Item
                         name="fullName"
-                        label="Full Name"
+                        label={t("fullname")}
                         rules={[{ required: true, message: "Please enter full name" }]}
                     >
                         <Input />
                     </Form.Item>
                     <Form.Item
                         name="email"
-                        label="Email"
+                        label={t("email")}
                         rules={[{ required: true, message: "Please enter email" }]}
                     >
                         <Input />
                     </Form.Item>
                     <Form.Item
                         name="idNumber"
-                        label="ID Number"
+                        label={t("idNumber")}
                         rules={[{ required: true, message: "Please enter ID number" }]}
                     >
                         <Input />
                     </Form.Item>
                     <Form.Item
                         name="departmentId"
-                        label="Department"
+                        label={t("departments")}
                         rules={[{ required: true, message: "Please select department" }]}
                     >
                         <Select>

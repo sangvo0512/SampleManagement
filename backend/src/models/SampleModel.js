@@ -10,7 +10,7 @@ class SampleModel {
 
     static async createSample(sampleData) {
         const {
-            serialNumber,
+            // serialNumber,  // ❌ Loại bỏ biến này
             brand,
             BU,
             season,
@@ -29,7 +29,7 @@ class SampleModel {
 
         const pool = await poolPromise;
         const result = await pool.request()
-            .input("serialNumber", sql.NVarChar, serialNumber)
+            // .input("serialNumber", sql.NVarChar, serialNumber)  // ❌ Loại bỏ dòng này
             .input("brand", sql.NVarChar, brand)
             .input("BU", sql.NVarChar, BU)
             .input("season", sql.NVarChar, season)
@@ -46,10 +46,10 @@ class SampleModel {
             .input("borrowdQuantity", sql.Int, BorrowdQuantity)
             .query(
                 `INSERT INTO Samples 
-                 (SerialNumber, Brand, BU, Season, ItemCode, WorkingNO, ArticleNO, Round, 
+                 (Brand, BU, Season, ItemCode, WorkingNO, ArticleNO, Round, 
                   NotifyProductionQuantity, DateInform, Quantity, InventoryLocation, WarehouseID, State, BorrowdQuantity)
                  VALUES 
-                 (@serialNumber, @brand, @BU, @season, @itemCode, @workingNO, @articleNO, @round, 
+                 (@brand, @BU, @season, @itemCode, @workingNO, @articleNO, @round, 
                   @notifyProductionQuantity, @dateInform, @quantity, @inventoryLocation, @warehouseID, @state, @borrowdQuantity);
                  SELECT SCOPE_IDENTITY() AS SampleID;`
             );
@@ -57,10 +57,21 @@ class SampleModel {
         return result.recordset[0].SampleID;
     }
 
-
-
     static async updateSample(id, sampleData) {
-        const { brand, BU, season, itemCode, workingNO, articleNO, round, notifyProductionQuantity, dateInform, quantity, inventoryLocation, state } = sampleData;
+        const {
+            brand,
+            BU,
+            season,
+            itemCode,
+            workingNO,
+            articleNO,
+            round,
+            notifyProductionQuantity,
+            dateInform,
+            quantity,
+            inventoryLocation,
+            state
+        } = sampleData;
 
         const pool = await poolPromise;
         const result = await pool.request()
