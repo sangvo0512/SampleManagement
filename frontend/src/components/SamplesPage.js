@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { Table, Button, Space, Modal, message, Image, Upload, Input, Row, Col, Select, Form, Popconfirm, DatePicker, Tag } from "antd";
+import { Table, Button, Space, Modal, message, Image, Upload, Input, Row, Col, Select, Form, Popconfirm, DatePicker, Tag, Descriptions } from "antd";
 import customParseFormat from "dayjs/plugin/customParseFormat";
 import { UploadOutlined, SearchOutlined, DownloadOutlined } from "@ant-design/icons";
 import axios from "axios";
@@ -84,7 +84,9 @@ const SamplePage = () => {
             };
 
             const res = await axios.post(`${API_BASE}/qr/generate`, payload);
+            console.log(res.data.qrCodes)
             setQrCodes(res.data.qrCodes);
+
             setCurrentSample(sample);
             setQrModalVisible(true);
         } catch (err) {
@@ -93,52 +95,123 @@ const SamplePage = () => {
     };
 
     const handlePrintAllQRCodes = () => {
-        const printWindow = window.open("", "_blank");
-        if (printWindow) {
-            const htmlContent = `
-                <html>
-                    <head>
-                        <title>In mã QR - ${currentSample?.SerialNumber}</title>
-                        <style>
-                            body { text-align: center; font-family: 'Segoe UI', sans-serif; padding: 20px; }
-                            img { margin: 10px; width: 150px; height: 150px; }
-                        </style>
-                    </head>
-                    <body>
-                        ${qrCodes.map(src => `<img src="${src}" />`).join("")}
-                    </body>
-                </html>
-            `;
-            printWindow.document.write(htmlContent);
-            printWindow.document.close();
-            printWindow.focus();
-            printWindow.print();
+        if (!qrCodes.length) {
+            message.warning(t("noQRCodesToPrint"));
+            return;
         }
+        console.log("qrCodes:", qrCodes);
+        const printWindow = window.open("", "_blank");
+        if (!printWindow) {
+            message.error(t("failedToOpenPrintWindow"));
+            return;
+        }
+        console.log("Đã mở printWindow");
+
+        const htmlContent = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>In tất cả mã QR</title>
+                <style>
+                    body { font-family: Arial, sans-serif; text-align: center; margin: 20px; }
+                    .qr-container { display: flex; flex-wrap: wrap; justify-content: center; }
+                    .qr-item { margin: 15px; text-align: center; }
+                    .qr-image { width: 100px; height: 100px; display: block; }
+                    .qr-label { font-size: 14px; margin-bottom: 5px; }
+                    .print-button { margin: 20px; padding: 10px 20px; font-size: 16px; }
+                    @media print {
+                        body { margin: 0; }
+                        .qr-image { width: 100px !important; height: 100px !important; }
+                        .qr-container { page-break-inside: avoid; }
+                        .print-button { display: none; }
+                    }
+                </style>
+            </head>
+            <body>
+                
+                <div class="qr-container">
+                    ${qrCodes.map((qr, idx) => `
+                        <div class="qr-item">
+                            <img class="qr-image" src="${qr.dataUrl}" alt="QR Code ${idx + 1}" />
+                            <div class="qr-label">${currentSample?.ItemCode || "N/A"} | ${idx + 1}</div>
+                        </div>
+                    `).join("")}
+                </div>
+                <button class="print-button" onclick="window.print()">In ngay</button>
+            </body>
+            </html>
+        `;
+        printWindow.document.write(htmlContent);
+        printWindow.document.close();
+        console.log("Đã viết HTML vào printWindow");
+
+        // Đợi render rồi gọi print
+        setTimeout(() => {
+            console.log("Gọi printWindow.print()");
+            printWindow.print();
+            // Không đóng cửa sổ ngay để kiểm tra
+        }, 1000);
     };
 
     const handlePrintSelectedQRCodes = () => {
-        const printWindow = window.open("", "_blank");
-        if (printWindow) {
-            const htmlContent = `
-                <html>
-                    <head>
-                        <title>In mã QR đã chọn - ${currentSample?.SerialNumber}</title>
-                        <style>
-                            body { text-align: center; font-family: 'Segoe UI', sans-serif; padding: 20px; }
-                            img { margin: 10px; width: 150px; height: 150px; }
-                        </style>
-                    </head>
-                    <body>
-                        <h2>Mã QR đã chọn - ${currentSample?.SerialNumber}</h2>
-                        ${selectedQRCodes.map(src => `<img src="${src}" />`).join("")}
-                    </body>
-                </html>
-            `;
-            printWindow.document.write(htmlContent);
-            printWindow.document.close();
-            printWindow.focus();
-            printWindow.print();
+        if (!selectedQRCodes.length) {
+            message.warning(t("noSelectedQRCodes"));
+            return;
         }
+        console.log("selectedQRCodes:", selectedQRCodes);
+        const printWindow = window.open("", "_blank");
+        if (!printWindow) {
+            message.error(t("failedToOpenPrintWindow"));
+            return;
+        }
+        console.log("Đã mở printWindow");
+
+        const htmlContent = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <style>
+                    body { font-family: Arial, sans-serif; text-align: center; margin: 20px; }
+                    .qr-container { display: flex; flex-wrap: wrap; justify-content: center; }
+                    .qr-item { margin: 15px; text-align: center; }
+                    .qr-image { width: 100px; height: 100px; display: block; }
+                    .qr-label { font-size: 14px; margin-bottom: 5px; }
+                    .print-button { margin: 20px; padding: 10px 20px; font-size: 16px; }
+                    @media print {
+                        body { margin: 0; }
+                        .qr-image { width: 100px !important; height: 100px !important; }
+                        .qr-container { page-break-inside: avoid; }
+                        .print-button { display: none; }
+                    }
+                </style>
+            </head>
+            <body>
+                <h2>${currentSample?.ItemCode || "Không xác định"}</h2>
+                <div class="qr-container">
+                    ${selectedQRCodes.map((qrId, idx) => {
+            const qr = qrCodes.find(q => q.qrCodeId === qrId);
+            return `
+                            <div class="qr-item">
+                                <img class="qr-image" src="${qr?.dataUrl || ""}" alt="QR Code ${idx + 1}" />
+                                <div class="qr-label">${currentSample?.ItemCode || "N/A"} | ${idx + 1}</div>
+                            </div>
+                        `;
+        }).join("")}
+                </div>
+                <button class="print-button" onclick="window.print()">In ngay</button>
+            </body>
+            </html>
+        `;
+        printWindow.document.write(htmlContent);
+        printWindow.document.close();
+        console.log("Đã viết HTML vào printWindow");
+
+        // Đợi render rồi gọi print
+        setTimeout(() => {
+            console.log("Gọi printWindow.print()");
+            printWindow.print();
+            // Không đóng cửa sổ ngay để kiểm tra
+        }, 1000);
     };
 
 
@@ -181,7 +254,7 @@ const SamplePage = () => {
     };
     const columns = [
         {
-            title: "Serial Number",
+            title: t("serialNumber"),
             render: (_, __, index) => index + 1,
         },
         { title: t("brand"), dataIndex: "Brand" },
@@ -213,7 +286,7 @@ const SamplePage = () => {
                 return <Tag color={color} style={{ fontWeight: "bold" }}>{state}</Tag>;
             }
         },
-        { title: t("borrowed"), dataIndex: "BorrowedQuantity" },
+        { title: t("borrowed"), dataIndex: "BorrowdQuantity" },
         {
             title: t("action"),
             render: (_, record) => (
@@ -296,7 +369,7 @@ const SamplePage = () => {
 
                 <Col>
                     <a
-                        href="/templates/Book2.xlsx"
+                        href="/template/Book2.xlsx"
                         download
                     >
                         <Button icon={<DownloadOutlined />}>
@@ -323,32 +396,76 @@ const SamplePage = () => {
             />
             {/* Detail Modal */}
             <Modal
-                title={`Chi tiết Sample – ${detailSample?.SerialNumber}`}
+                className="sample-detail"
+                title={`Chi tiết Sample – ${detailSample?.ItemCode}`}
                 open={detailModalVisible}
                 onCancel={() => setDetailModalVisible(false)}
                 footer={null}
+                width={700}
             >
                 {detailSample && (
-                    <div style={{ lineHeight: 1.8 }}>
-                        <p><strong>SerialNumber:</strong> {detailSample.SerialNumber}</p>
-                        <p><strong>Brand:</strong> {detailSample.Brand}</p>
-                        <p><strong>BU:</strong> {detailSample.BU}</p>
-                        <p><strong>Season:</strong> {detailSample.Season}</p>
-                        <p><strong>ItemCode:</strong> {detailSample.ItemCode}</p>
-                        <p><strong>WorkingNO:</strong> {detailSample.WorkingNO}</p>
-                        <p><strong>ArticleNO:</strong> {detailSample.ArticleNO}</p>
-                        <p><strong>Round:</strong> {detailSample.Round}</p>
-                        <p><strong>NotifyProductionQuantity:</strong> {detailSample.NotifyProductionQuantity}</p>
-                        <p><strong>DateInform:</strong> {detailSample.DateInform}</p>
-                        <p><strong>Quantity:</strong> {detailSample.Quantity}</p>
-                        <p><strong>InventoryLocation:</strong> {detailSample.InventoryLocation}</p>
-                        <p><strong>State:</strong> {detailSample.State}</p>
-                        <p><strong>BorrowedQuantity:</strong> {detailSample.BorrowedQuantity}</p>
-                    </div>
+                    <Descriptions
+                        column={2}
+                        bordered
+                        size="middle"
+                        labelStyle={{ fontWeight: 'bold', width: 180 }}
+                    >
+                        <Descriptions.Item label={t("brand")}>
+                            {detailSample.Brand}
+                        </Descriptions.Item>
+
+                        <Descriptions.Item label={t("BU")}>
+                            {detailSample.BU}
+                        </Descriptions.Item>
+                        <Descriptions.Item label={t("season")}>
+                            {detailSample.Season}
+                        </Descriptions.Item>
+
+                        <Descriptions.Item label={t("itemCode")}>
+                            {detailSample.ItemCode}
+                        </Descriptions.Item>
+                        <Descriptions.Item label={t("workingNo")}>
+                            {detailSample.WorkingNO}
+                        </Descriptions.Item>
+
+                        <Descriptions.Item label={t("articleNo")}>
+                            {detailSample.ArticleNO}
+                        </Descriptions.Item>
+                        <Descriptions.Item label={t("round")}>
+                            {detailSample.Round}
+                        </Descriptions.Item>
+
+                        <Descriptions.Item label={t("notifyProductQuantity")}>
+                            {detailSample.NotifyProductionQuantity}
+                        </Descriptions.Item>
+                        <Descriptions.Item label={t("notificationDate")}>
+                            {dayjs(detailSample.DateInform).format("MM/DD/YYYY")}
+                        </Descriptions.Item>
+
+                        <Descriptions.Item label={t("stockQuantity")}>
+                            {detailSample.Quantity}
+                        </Descriptions.Item>
+                        <Descriptions.Item label={t("borrowed")}>
+                            {detailSample.BorrowdQuantity}
+                        </Descriptions.Item>
+
+                        <Descriptions.Item label={t("location")}>
+                            {detailSample.InventoryLocation}
+                        </Descriptions.Item>
+                        <Descriptions.Item label={t("state")}>
+                            <Tag color={
+                                detailSample.State === "Available" ? "green" :
+                                    detailSample.State === "Unavailable" ? "red" :
+                                        detailSample.State === "Exported" ? "blue" : "default"
+                            }>
+                                {detailSample.State}
+                            </Tag>
+                        </Descriptions.Item>
+                    </Descriptions>
                 )}
             </Modal>
             <Modal
-                title={`${t("generate")} - ${currentSample?.SerialNumber}`}
+                title={`${t("generate")} - ${currentSample?.ItemCode}`}
                 open={qrModalVisible}
                 onCancel={() => {
                     setQrModalVisible(false);
@@ -359,22 +476,24 @@ const SamplePage = () => {
             >
                 <div style={{ textAlign: "center" }}>
                     <Row gutter={[16, 16]} justify="center">
-                        {qrCodes.map((src, idx) => (
-                            <Col key={idx}>
+                        {qrCodes.map((qr, idx) => (
+                            <Col key={qr.qrCodeId}>
                                 <div style={{ textAlign: "center" }}>
-                                    <Image src={src} width={120} />
+                                    <Image src={qr.dataUrl} width={120} />
                                     <div style={{ marginTop: 4, fontSize: 12 }}>
                                         {currentSample?.ItemCode} | {idx + 1}
                                     </div>
                                     <div>
                                         <input
                                             type="checkbox"
-                                            checked={selectedQRCodes.includes(src)}
+                                            checked={selectedQRCodes.includes(qr.qrCodeId)}
                                             onChange={(e) => {
                                                 if (e.target.checked) {
-                                                    setSelectedQRCodes([...selectedQRCodes, src]);
+                                                    setSelectedQRCodes([...selectedQRCodes, qr.qrCodeId]);
                                                 } else {
-                                                    setSelectedQRCodes(selectedQRCodes.filter(qr => qr !== src));
+                                                    setSelectedQRCodes(
+                                                        selectedQRCodes.filter(id => id !== qr.qrCodeId)
+                                                    );
                                                 }
                                             }}
                                         />
@@ -382,6 +501,7 @@ const SamplePage = () => {
                                 </div>
                             </Col>
                         ))}
+
 
 
                     </Row>

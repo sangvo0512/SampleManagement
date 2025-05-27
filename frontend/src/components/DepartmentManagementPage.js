@@ -83,10 +83,10 @@ const DepartmentManagement = () => {
                         {t("edit")}
                     </Button>
                     <Popconfirm
-                        title="Are you sure to delete this department?"
+                        title={t("deleteConfirm")}
                         onConfirm={() => handleDelete(record.DepartmentID)}
-                        okText="Yes"
-                        cancelText="No"
+                        okText={t("yes")}
+                        cancelText={t("no")}
                     >
                         <Button type="danger">
                             {t("delete")}

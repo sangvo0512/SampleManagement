@@ -172,8 +172,8 @@ const GroupManagementPage = () => {
                     <Popconfirm
                         title={t("groupConfirm")}
                         onConfirm={() => handleDeleteGroup(record.GroupID)}
-                        okText="Y"
-                        cancelText="N"
+                        okText={t("yes")}
+                        cancelText={t("no")}
                     ><Button type="danger" >
                             {t("delete")}
                         </Button>

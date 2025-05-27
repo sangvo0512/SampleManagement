@@ -102,9 +102,8 @@ const UserManagement = () => {
                     <Popconfirm
                         title={t("userConfirm")}
                         onConfirm={() => handleDelete(record.UserID)}
-                        okText="Y"
-                        cancelText="N"
-                    >
+                        okText={t("yes")}
+                        cancelText={t("no")}>
                         <Button type="danger">{t("delete")}</Button>
                     </Popconfirm>
 

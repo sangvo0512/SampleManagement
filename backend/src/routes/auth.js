@@ -59,7 +59,8 @@ router.post("/login", async (req, res, next) => {
                     username: dbUser.Username,
                     fullName: dbUser.FullName,
                     email: dbUser.Email,
-                    departmentId: dbUser.DepartmentID
+                    departmentId: dbUser.DepartmentID,
+                    idNumber: dbUser.IdNumber
                 },
                 permissions // 👈 Thêm dòng này để gửi xuống frontend
             });

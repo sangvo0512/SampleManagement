@@ -92,10 +92,10 @@ const WarehouseManagementPage = () => {
                         {t("edit")}
                     </Button>
                     <Popconfirm
-                        title="Are you sure to delete this warehouse?"
+                        title={t("deleteConfirm")}
                         onConfirm={() => handleDelete(record.WarehouseID)}
-                        okText="Yes"
-                        cancelText="No"
+                        okText={t("yes")}
+                        cancelText={t("no")}
                     >
                         <Button type="danger">
                             {t("delete")}

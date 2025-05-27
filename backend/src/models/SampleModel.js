@@ -10,7 +10,6 @@ class SampleModel {
 
     static async createSample(sampleData) {
         const {
-            // serialNumber,  // ❌ Loại bỏ biến này
             brand,
             BU,
             season,
@@ -29,7 +28,6 @@ class SampleModel {
 
         const pool = await poolPromise;
         const result = await pool.request()
-            // .input("serialNumber", sql.NVarChar, serialNumber)  // ❌ Loại bỏ dòng này
             .input("brand", sql.NVarChar, brand)
             .input("BU", sql.NVarChar, BU)
             .input("season", sql.NVarChar, season)
@@ -107,6 +105,41 @@ class SampleModel {
 
         return result.rowsAffected[0];
     }
+    static async getSampleByItemCode(itemCode) {
+        const pool = await poolPromise;
+        const result = await pool.request()
+            .input("itemCode", sql.NVarChar, itemCode)
+            .query("SELECT * FROM Samples WHERE ItemCode = @itemCode");
+
+        return result.recordset[0];
+    }
+    static async updateSampleByItemCode(itemCode, updateData, transaction) {
+        try {
+            console.log(`updateSampleByItemCode: ItemCode=${itemCode}, UpdateData=`, updateData);
+            const request = transaction.request();
+            request.input('itemCode', sql.NVarChar, itemCode);
+            request.input('quantity', sql.Int, updateData.Quantity);
+            request.input('borrowdQuantity', sql.Int, updateData.BorrowdQuantity);
+            request.input('state', sql.NVarChar, updateData.State);
+
+            const result = await request.query(`
+                UPDATE Samples 
+                SET Quantity = @quantity, BorrowdQuantity = @borrowdQuantity, State = @state
+                WHERE ItemCode = @itemCode
+            `);
+            console.log(`updateSampleByItemCode result: RowsAffected=${result.rowsAffected}`);
+            if (result.rowsAffected[0] === 0) {
+                console.error(`Không tìm thấy mẫu với ItemCode=${itemCode}`);
+                throw new Error(`Không tìm thấy mẫu với ItemCode=${itemCode}`);
+            }
+            return result.rowsAffected[0] > 0;
+        } catch (error) {
+            console.error("Error updating sample:", error);
+            throw error;
+        }
+    }
+
+
 }
 
 module.exports = SampleModel;

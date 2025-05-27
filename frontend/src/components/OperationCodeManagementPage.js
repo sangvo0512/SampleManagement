@@ -79,10 +79,10 @@ const OperationCodeManagementPage = () => {
                 <>
                     <Button onClick={() => handleEdit(record)} type="primary" style={{ marginRight: 8 }}>{t("edit")}</Button>
                     <Popconfirm
-                        title="Are you sure to delete this operation code?"
+                        title={t("deleteConfirm")}
                         onConfirm={() => handleDelete(record.ReasonID)}
-                        okText="Yes"
-                        cancelText="No"
+                        okText={t("yes")}
+                        cancelText={t("no")}
                     >
                         <Button type="danger">{t("delete")}</Button>
                     </Popconfirm>

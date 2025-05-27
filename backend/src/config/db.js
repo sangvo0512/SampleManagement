@@ -11,6 +11,12 @@ const config = {
         encrypt: false,
         trustServerCertificate: true,
     },
+    pool: {
+        max: 20, // Số kết nối tối đa.
+        min: 0,
+        // idleTimeoutMillis: 30000 // Thời gian chờ đóng kết nối nhàn rỗi.
+    },
+    requestTimeout: 15000 //Thời gian chờ phản hổi.
 };
 
 const poolPromise = new sql.ConnectionPool(config)

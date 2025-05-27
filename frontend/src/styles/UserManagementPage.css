@@ -99,3 +99,10 @@
     background-color: #c0392b;
     border-color: #c0392b;
 }
+
+.user-management .ant-table {
+    background-color: #ffffff;
+    border-radius: 12px;
+    padding: 12px;
+    overflow-x: auto;
+}

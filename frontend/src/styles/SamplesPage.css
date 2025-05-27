@@ -64,6 +64,15 @@
     font-weight: 600;
 }
 
+.sample-detail .detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px 24px;
+    padding: 12px;
+    line-height: 1.6;
+    font-size: 15px;
+}
+
 /* Responsive cho các thiết bị nhỏ hơn */
 @media (max-width: 768px) {
     .sample-page {

@@ -1,0 +1,106 @@
+/* TransactionFormStep.css */
+.transaction-form-step {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    padding: 1rem;
+}
+
+/* Tiêu đề */
+.transaction-form-step .ant-typography {
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 1.5rem;
+    text-align: center;
+}
+
+/* Form */
+.transaction-form-step .ant-form {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+/* Form Item */
+.transaction-form-step .ant-form-item {
+    margin-bottom: 16px;
+}
+
+/* Input */
+.transaction-form-step .ant-input,
+.transaction-form-step .ant-select-selector,
+.transaction-form-step .ant-input-textarea textarea {
+    border-radius: 8px !important;
+}
+
+/* Select */
+.transaction-form-step .ant-select-selector {
+    width: 100%;
+}
+
+/* Textarea */
+.transaction-form-step .ant-input-textarea textarea {
+    resize: vertical;
+}
+
+/* Nút */
+.transaction-form-step .ant-btn {
+    border-radius: 8px;
+}
+
+.transaction-form-step .ant-btn-primary {
+    background-color: #64cacf;
+    border-color: #64cacf;
+}
+
+.transaction-form-step .ant-btn-primary:hover {
+    background-color: #56b3c0;
+    border-color: #56b3c0;
+}
+
+.transaction-form-step .ant-btn-default {
+    border-color: #d9d9d9;
+}
+
+.transaction-form-step .ant-btn-default:hover {
+    border-color: #56b3c0;
+    color: #56b3c0;
+}
+
+/* Thông báo lỗi */
+.transaction-form-step .ant-typography-danger {
+    display: block;
+    margin-bottom: 16px;
+    font-size: 0.9rem;
+}
+
+/* Container cho các nút */
+.transaction-form-step .ant-form-item:last-child {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .transaction-form-step {
+        padding: 0.5rem;
+    }
+
+    .transaction-form-step .ant-form {
+        max-width: 100%;
+    }
+
+    .transaction-form-step .ant-input,
+    .transaction-form-step .ant-select-selector,
+    .transaction-form-step .ant-input-textarea textarea {
+        width: 100% !important;
+    }
+
+    .transaction-form-step .ant-btn {
+        width: 100%;
+    }
+
+    .transaction-form-step .ant-form-item:last-child {
+        flex-direction: column;
+        gap: 12px;
+    }
+}

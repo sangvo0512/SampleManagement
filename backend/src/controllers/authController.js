@@ -32,7 +32,8 @@ exports.login = async (req, res) => {
                 username: user.Username,
                 displayName,
                 email: mail,
-                departmentId: user.DepartmentID
+                departmentId: user.DepartmentID,
+                idNumber: user.IdNumber
             }
         });
 

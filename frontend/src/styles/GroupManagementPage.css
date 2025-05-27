@@ -1,13 +1,13 @@
-/* Container tổng thể */
-.access-page-container {
+/* Container tổng thể cho trang Group Management */
+.group-management {
     padding: 2rem;
     background-color: #fffcf7;
     min-height: 100vh;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-/* Tiêu đề */
-.access-page-title {
+/* Tiêu đề trang */
+.group-management h2 {
     font-size: 1.8rem;
     font-weight: 600;
     color: #333;
@@ -15,61 +15,95 @@
     text-align: center;
 }
 
-/* Search bar */
-.search-bar {
-    margin-bottom: 1rem;
-    width: 100%;
-    max-width: 400px;
-}
-
-/* Nút quản lý phân quyền */
-.permission-button {
+/* Nút Thêm Nhóm */
+.add-group-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    padding: 0.75rem 1.5rem;
+    border-radius: 4px;
     background-color: #64cacf;
-    border-color: #64cacf;
     color: #fff;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    text-transform: uppercase;
 }
 
-.permission-button:hover {
+.add-group-button:hover {
     background-color: #4ca7c3;
-    border-color: #4ca7c3;
 }
 
-/* Nút xóa (giữ màu đỏ) */
-.access-page-container .ant-btn-danger {
-    background-color: #e74c3c;
-    border-color: #e74c3c;
-    color: #fff;
+/* Bảng dữ liệu */
+.group-management .ant-table {
+    background-color: #fff;
+    border-radius: 12px;
+    padding: 12px;
+    overflow-x: auto;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
-.access-page-container .ant-btn-danger:hover {
-    background-color: #c0392b;
-    border-color: #c0392b;
-}
-
-/* Modal bo tròn góc */
-.access-page-container .ant-modal-content {
-    border-radius: 8px;
-}
-
-/* Label form */
-.access-page-container .ant-form-item-label>label {
-    font-weight: 500;
-    color: #333;
-}
-
-/* Select permission style */
-.permission-select {
-    width: 100%;
-}
-
-/* Header bảng */
-.access-page-container .ant-table-thead>tr>th {
+/* Header của bảng */
+.group-management .ant-table-thead>tr>th {
     background-color: #e9ecef;
     color: #333;
     font-weight: 600;
 }
 
-/* Hover bảng */
-.access-page-container .ant-table-tbody>tr:hover {
+/* Hiệu ứng hover cho dòng bảng */
+.group-management .ant-table-tbody>tr:hover {
     background-color: #f1f1f1;
+}
+
+/* Modal bo góc */
+.modal-custom .ant-modal-content {
+    border-radius: 8px;
+}
+
+/* Label của form */
+.group-management .ant-form-item-label>label {
+    font-weight: 500;
+    color: #333;
+}
+
+/* Nút primary (Edit) */
+.group-management .ant-btn-primary {
+    background-color: #64cacf;
+    border-color: #64cacf;
+    color: #fff;
+    text-align: center;
+}
+
+.group-management .ant-btn-primary:hover {
+    background-color: #4ca7c3;
+    border-color: #4ca7c3;
+}
+
+/* Nút danger (Delete) */
+.group-management .ant-btn-danger {
+    background-color: #e74c3c;
+    border-color: #e74c3c;
+    color: #fff;
+}
+
+.group-management .ant-btn-danger:hover {
+    background-color: #c0392b;
+    border-color: #c0392b;
+}
+
+/* Nút dashed (Thêm thành viên) */
+.group-management .ant-btn-dashed {
+    color: #64cacf;
+    border-color: #64cacf;
+}
+
+.group-management .ant-btn-dashed:hover {
+    color: #4ca7c3;
+    border-color: #4ca7c3;
+}
+
+/* AutoComplete */
+.group-management .ant-select-selector {
+    border-radius: 4px !important;
 }

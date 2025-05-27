@@ -1,0 +1,114 @@
+/* TransactionFlowPage.css */
+.transaction-flow-page {
+    background-color: #fffcf7;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    padding: 2rem;
+    min-height: 100vh;
+}
+
+/* Card chứa nội dung */
+.transaction-flow-page .ant-card {
+    background-color: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    margin: 24px;
+}
+
+/* Steps */
+.transaction-flow-page .ant-steps {
+    margin-bottom: 24px;
+}
+
+.transaction-flow-page .ant-steps-item-title {
+    font-size: 1.1rem;
+    color: #333;
+    font-weight: 500;
+}
+
+.transaction-flow-page .ant-steps-item-active .ant-steps-item-title,
+.transaction-flow-page .ant-steps-item-finish .ant-steps-item-title {
+    color: #64cacf;
+}
+
+.transaction-flow-page .ant-steps-item-icon {
+    background-color: #e9ecef;
+    border-color: #e9ecef;
+}
+
+.transaction-flow-page .ant-steps-item-active .ant-steps-item-icon,
+.transaction-flow-page .ant-steps-item-finish .ant-steps-item-icon {
+    background-color: #64cacf;
+    border-color: #64cacf;
+}
+
+.transaction-flow-page .ant-steps-item-active .ant-steps-icon,
+.transaction-flow-page .ant-steps-item-finish .ant-steps-icon {
+    color: #ffffff;
+}
+
+/* Nút */
+.transaction-flow-page .ant-btn-primary {
+    background-color: #64cacf;
+    border-color: #64cacf;
+    border-radius: 8px;
+}
+
+.transaction-flow-page .ant-btn-primary:hover {
+    background-color: #56b3c0;
+    border-color: #56b3c0;
+}
+
+.transaction-flow-page .ant-btn {
+    border-radius: 8px;
+}
+
+/* Input và Select */
+.transaction-flow-page .ant-input,
+.transaction-flow-page .ant-select-selector {
+    border-radius: 8px !important;
+}
+
+/* Form item */
+.transaction-flow-page .ant-form-item {
+    margin-bottom: 16px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .transaction-flow-page {
+        padding: 1rem;
+    }
+
+    .transaction-flow-page .ant-card {
+        margin: 12px;
+        width: 95% !important;
+        max-width: 100% !important;
+    }
+
+    .transaction-flow-page .ant-steps {
+        margin-bottom: 16px;
+    }
+
+    .transaction-flow-page .ant-steps-item-title {
+        font-size: 1rem;
+    }
+
+    .transaction-flow-page .ant-btn {
+        width: 100%;
+    }
+
+    .transaction-flow-page .ant-input,
+    .transaction-flow-page .ant-select-selector {
+        width: 100% !important;
+    }
+
+    .transaction-flow-page .ant-row {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .transaction-flow-page .ant-col {
+        width: 100% !important;
+    }
+}

@@ -1,0 +1,114 @@
+/* SelectTransactionType.css */
+.select-transaction-type {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    padding: 1rem;
+}
+
+/* Tiêu đề */
+.select-transaction-type .ant-typography {
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 1.5rem;
+    text-align: center;
+}
+
+/* Radio Group */
+.select-transaction-type .ant-radio-group {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+/* Radio Button */
+.select-transaction-type .ant-radio-button-wrapper {
+    border-radius: 8px;
+    border: 1px solid #d9d9d9;
+    background-color: #ffffff;
+    color: #333;
+    padding: 8px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+}
+
+.select-transaction-type .ant-radio-button-wrapper-checked {
+    background-color: #64cacf;
+    border-color: #64cacf;
+    color: #ffffff;
+}
+
+.select-transaction-type .ant-radio-button-wrapper:hover {
+    background-color: #f5f5f5;
+    border-color: #d9d9d9;
+}
+
+.select-transaction-type .ant-radio-button-wrapper-checked:hover {
+    background-color: #56b3c0;
+    border-color: #56b3c0;
+}
+
+/* Icon trong Radio Button */
+.select-transaction-type .ant-radio-button-wrapper .anticon {
+    font-size: 1.2rem;
+}
+
+/* Nút Tiếp tục và Quay lại */
+.select-transaction-type .ant-btn {
+    border-radius: 8px;
+}
+
+.select-transaction-type .ant-btn-primary {
+    background-color: #64cacf;
+    border-color: #64cacf;
+}
+
+.select-transaction-type .ant-btn-primary:hover {
+    background-color: #56b3c0;
+    border-color: #56b3c0;
+}
+
+.select-transaction-type .ant-btn-default {
+    border-color: #d9d9d9;
+}
+
+.select-transaction-type .ant-btn-default:hover {
+    border-color: #56b3c0;
+    color: #56b3c0;
+}
+
+/* Space chứa các nút */
+.select-transaction-type .ant-space {
+    display: flex;
+    justify-content: flex-end;
+    gap: 16px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .select-transaction-type {
+        padding: 0.5rem;
+    }
+
+    .select-transaction-type .ant-radio-group {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .select-transaction-type .ant-radio-button-wrapper {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .select-transaction-type .ant-btn {
+        width: 100%;
+    }
+
+    .select-transaction-type .ant-space {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}

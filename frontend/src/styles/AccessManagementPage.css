@@ -1,5 +1,5 @@
-/* Container tổng thể */
-.access-management {
+/* Tổng thể trang Access Management */
+.access-page-container {
     padding: 2rem;
     background-color: #fffcf7;
     min-height: 100vh;
@@ -7,7 +7,7 @@
 }
 
 /* Tiêu đề trang */
-.access-management h2 {
+.access-page-container .access-page-title {
     font-size: 1.8rem;
     font-weight: 600;
     color: #333;
@@ -15,107 +15,104 @@
     text-align: center;
 }
 
-/* Tabs style */
-.access-management .ant-tabs-nav {
-    margin-bottom: 1.5rem;
-}
-
-.access-management .ant-tabs-tab {
-    font-weight: 500;
-    padding: 8px 16px;
+/* Tabs chính */
+.access-page-container .ant-tabs-card .ant-tabs-card-bar {
+    background-color: #fff !important;
     border-radius: 8px 8px 0 0;
-    background-color: #f5f5f5;
-    margin-right: 8px;
-    transition: all 0.3s ease;
-}
-
-.access-management .ant-tabs-tab-active {
-    background-color: #64cacf !important;
-    color: white !important;
-}
-
-/* Thanh tìm kiếm */
-.access-management .search-bar {
-    max-width: 300px;
-    margin-bottom: 1rem;
-}
-
-.access-management .ant-input {
-    border-radius: 8px;
-    padding: 6px 12px;
-}
-
-.access-management .ant-input-search-button {
-    border-radius: 0 8px 8px 0;
-    background-color: #64cacf;
-    border-color: #64cacf;
-    color: white;
-}
-
-.access-management .ant-input-search-button:hover {
-    background-color: #4ca7c3;
-    border-color: #4ca7c3;
-}
-
-/* Bảng người dùng */
-.access-management-table {
-    background-color: #fff;
-    border-radius: 8px;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e0e0e0;
     overflow: hidden;
 }
 
+.access-page-container .ant-tabs-tab {
+    font-weight: 500;
+    color: #333;
+}
+
+.access-page-container .ant-tabs-tab-active {
+    background-color: #64cacf;
+    color: #fff !important;
+}
+
+/* Thanh tìm kiếm */
+.access-page-container .search-bar {
+    margin-bottom: 1rem;
+    max-width: 300px;
+}
+
+/* Bảng */
+.access-page-container .ant-table {
+    background-color: #fff;
+    border-radius: 12px;
+    padding: 12px;
+    overflow-x: auto;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
 /* Header của bảng */
-.access-management .ant-table-thead>tr>th {
+.access-page-container .ant-table-thead>tr>th {
     background-color: #e9ecef;
     color: #333;
     font-weight: 600;
 }
 
-/* Hiệu ứng hover dòng */
-.access-management .ant-table-tbody>tr:hover {
+.access-page-container .ant-table-tbody>tr:hover {
     background-color: #f1f1f1;
 }
 
-/* Nút "Manage Permissions" */
-.permission-button .ant-btn {
-    background-color: #64cacf;
-    border: none;
-    color: white;
-    font-weight: 500;
-    padding: 6px 12px;
-    border-radius: 6px;
-    transition: background-color 0.3s ease;
-}
-
-.permission-button .ant-btn:hover {
-    background-color: #4ca7c3;
-}
-
-/* Nút trong modal */
-.access-management .ant-btn-primary {
+/* Nút hành động */
+.access-page-container .permission-button {
     background-color: #64cacf;
     border-color: #64cacf;
-    color: white;
+    color: #fff;
+    font-weight: 500;
+    transition: all 0.3s ease;
 }
 
-.access-management .ant-btn-primary:hover {
+.access-page-container .permission-button:hover {
     background-color: #4ca7c3;
     border-color: #4ca7c3;
+    color: #fff;
 }
 
-.access-management .ant-btn-danger {
+/* Nút xoá (Danger) */
+.access-page-container .ant-btn-danger {
     background-color: #e74c3c;
     border-color: #e74c3c;
-    color: white;
+    color: #fff;
 }
 
-.access-management .ant-btn-danger:hover {
+.access-page-container .ant-btn-danger:hover,
+.access-page-container .ant-btn-danger:focus {
     background-color: #c0392b;
     border-color: #c0392b;
 }
 
-/* Bo tròn modal */
-.access-management .ant-modal-content {
+/* Select trong form */
+.access-page-container .permission-select {
+    width: 100%;
+}
+
+.access-page-container .ant-select-selector {
+    border-radius: 4px;
+}
+
+/* Modal */
+.access-page-container .ant-modal-content {
     border-radius: 8px;
+}
+
+.access-page-container .ant-modal-header {
+    background-color: #fafafa;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.access-page-container .ant-modal-title {
+    font-weight: 600;
+    color: #333;
+}
+
+/* Form label */
+.access-page-container .ant-form-item-label>label {
+    font-weight: 500;
+    color: #333;
 }

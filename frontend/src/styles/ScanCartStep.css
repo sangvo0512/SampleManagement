@@ -1,0 +1,73 @@
+/* ScanCartStep.css */
+.scan-cart-step {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    padding: 1rem;
+}
+
+/* Input quét QR */
+.scan-cart-step .ant-input {
+    border-radius: 8px !important;
+    margin-bottom: 16px;
+}
+
+/* Bảng danh sách QR */
+.scan-cart-step .ant-table {
+    background-color: #ffffff;
+    border-radius: 12px;
+    padding: 12px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    overflow-x: auto;
+}
+
+.scan-cart-step .ant-table-thead>tr>th {
+    background-color: #e9ecef;
+    color: #333;
+    font-weight: 600;
+}
+
+/* Nút Tiếp tục */
+.scan-cart-step .ant-btn-primary {
+    background-color: #64cacf;
+    border-color: #64cacf;
+    border-radius: 8px;
+    margin-top: 16px;
+}
+
+.scan-cart-step .ant-btn-primary:hover {
+    background-color: #56b3c0;
+    border-color: #56b3c0;
+}
+
+/* Nút Xóa trong bảng */
+.scan-cart-step .ant-btn-danger {
+    border-radius: 8px;
+}
+
+.scan-cart-step .ant-btn-danger:hover {
+    background-color: #ff4d4f;
+    border-color: #ff4d4f;
+}
+
+/* Popconfirm */
+.scan-cart-step .ant-popconfirm .ant-btn {
+    border-radius: 8px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .scan-cart-step {
+        padding: 0.5rem;
+    }
+
+    .scan-cart-step .ant-input {
+        width: 100% !important;
+    }
+
+    .scan-cart-step .ant-btn {
+        width: 100%;
+    }
+
+    .scan-cart-step .ant-table {
+        overflow-x: auto;
+    }
+}

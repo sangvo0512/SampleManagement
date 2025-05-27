@@ -1,0 +1,115 @@
+/* HistoryPage.css */
+.transaction-logs {
+    background-color: #fffcf7;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    padding: 2rem;
+    min-height: 100vh;
+}
+
+/* Card chứa nội dung */
+.transaction-logs .ant-card {
+    background-color: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Tiêu đề trang */
+.transaction-logs .ant-typography {
+    font-size: 1.8rem;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 1.5rem;
+    text-align: center;
+}
+
+/* Nút primary (sắp xếp) */
+.transaction-logs .ant-btn-primary {
+    background-color: #64cacf;
+    border-color: #64cacf;
+    border-radius: 8px;
+}
+
+.transaction-logs .ant-btn-primary:hover {
+    background-color: #56b3c0;
+    border-color: #56b3c0;
+}
+
+/* Nút thông thường */
+.transaction-logs .ant-btn {
+    border-radius: 8px;
+}
+
+/* Ô tìm kiếm */
+.transaction-logs .ant-input-search .ant-input {
+    border-radius: 8px !important;
+}
+
+.transaction-logs .ant-input-search .ant-btn {
+    border-radius: 8px;
+    background-color: #64cacf;
+    border-color: #64cacf;
+}
+
+.transaction-logs .ant-input-search .ant-btn:hover {
+    background-color: #56b3c0;
+    border-color: #56b3c0;
+}
+
+/* Bảng dữ liệu */
+.transaction-logs .ant-table {
+    background-color: #ffffff;
+    border-radius: 12px;
+    padding: 12px;
+    overflow-x: auto;
+}
+
+.transaction-logs .ant-table-thead>tr>th {
+    background-color: #e9ecef;
+    color: #333;
+    font-weight: 600;
+}
+
+/* Khoảng cách cho form item (ô tìm kiếm, nút) */
+.transaction-logs .ant-form-item {
+    margin-bottom: 16px;
+}
+
+/* Container cho ô tìm kiếm và nút sắp xếp */
+.transaction-logs .filter-container {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+/* Responsive cho thiết bị nhỏ hơn */
+@media (max-width: 768px) {
+    .transaction-logs {
+        padding: 1rem;
+    }
+
+    .transaction-logs .ant-typography {
+        font-size: 1.4rem;
+    }
+
+    .transaction-logs .filter-container {
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .transaction-logs .ant-input-search {
+        width: 100% !important;
+    }
+
+    .transaction-logs .ant-btn {
+        width: 100%;
+    }
+
+    .transaction-logs .ant-table {
+        overflow-x: auto;
+    }
+
+    .transaction-logs .ant-card {
+        width: 95% !important;
+        max-width: 100% !important;
+    }
+}
