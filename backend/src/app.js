@@ -3,7 +3,7 @@ const bodyParser = require("body-parser");
 const cors = require("cors");
 const passport = require("passport");
 require("dotenv").config();
-require("./config/passport"); // Khởi tạo cấu hình passport
+require("./config/passport");
 
 const app = express();
 

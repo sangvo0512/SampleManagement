@@ -128,5 +128,7 @@
     "na": "N/A",
     "transactionHistory": "Transaction history",
     "searchByItemCode": "Search by item code",
-    "sortByActionType": "Sort by action type"
+    "sortByActionType": "Sort by action type",
+    "cannotDeleteUserInGroup": "The user cannot be deleted because the user belongs to one or more groups. Please remove the user from groups before performing the deletion operation.",
+    "saveChanges": "Save changes"
 }

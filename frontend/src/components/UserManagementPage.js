@@ -1,7 +1,7 @@
 // src/components/UserManagement.js
 import React, { useEffect, useState, useCallback } from "react";
 import axios from "axios";
-import { Select, Table, Button, Modal, Input, Form, Popconfirm } from "antd";
+import { Select, Table, Button, Modal, Input, Form, Popconfirm, message } from "antd";
 import "../styles/UserManagementPage.css";
 import { useTranslation } from "react-i18next";
 
@@ -47,9 +47,12 @@ const UserManagement = () => {
     const handleDelete = async (userId) => {
         try {
             await axios.delete(`${API_BASE}/users/${userId}`);
+            message.success(t("userDeletedSuccess"));
             fetchUsers();
         } catch (error) {
             console.error("Error deleting user:", error);
+            const errorMessage = error.response?.data?.message || t("failedToDeleteUser");
+            message.error(errorMessage);
         }
     };
 
@@ -100,7 +103,7 @@ const UserManagement = () => {
                 <>
                     <Button onClick={() => handleEdit(record)} type="primary" style={{ marginRight: 8 }}>{t("edit")}</Button>
                     <Popconfirm
-                        title={t("userConfirm")}
+                        title={t("deleteConfirm", { username: record.Username })}
                         onConfirm={() => handleDelete(record.UserID)}
                         okText={t("yes")}
                         cancelText={t("no")}>

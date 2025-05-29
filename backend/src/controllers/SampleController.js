@@ -43,11 +43,11 @@ class SampleController {
             const { id } = req.params;
             const rowsAffected = await SampleModel.deleteSample(id);
             if (rowsAffected === 0) {
-                return res.status(404).json({ message: "Sample not found" });
+                return res.status(404).json({ message: "Không tìm thấy sản phẩm hoặc sản phẩm không thể xóa" });
             }
-            res.json({ message: "Sample deleted successfully" });
+            res.json({ message: "Xóa sản phẩm thành công" });
         } catch (err) {
-            res.status(500).json({ error: err.message });
+            res.status(500).json({ error: `Lỗi khi xóa sản phẩm: ${err.message}` });
         }
     }
 

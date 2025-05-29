@@ -129,5 +129,11 @@
     "na": "N/A",
     "transactionHistory": "Lịch sử giao dịch",
     "searchByItemCode": "Tìm kiếm theo mã sản phẩm",
-    "sortByActionType": "Sắp xếp theo loại hành động"
+    "sortByActionType": "Sắp xếp theo loại hành động",
+    "cannotDeleteUserInGroup": "Không thể xóa người dùng vì người dùng đang thuộc một hoặc nhiều nhóm. Vui lòng xóa người dùng khỏi nhóm trước khi thực hiện thao tác xóa.",
+    "saveChanges": "Lưu thay đổi.",
+    "error": "Lỗi",
+    "errorDetails": "Chi tiết lỗi",
+    "importSuccess": "Import thành công",
+    "importFailed": "Import thất bại"
 }

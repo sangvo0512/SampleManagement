@@ -58,11 +58,17 @@ class UserController {
             const { userId } = req.params;
             const deleted = await UserModel.deleteUser(userId);
             if (!deleted) {
-                return res.status(404).json({ message: "User not found" });
+                return res.status(404).json({ message: "User does not exist." });
             }
-            res.json({ message: "User deleted successfully" });
+            res.json({ message: "User deleted successfully." });
         } catch (err) {
-            res.status(500).json({ error: err.message });
+            console.error("Error deleting user:", err);
+            if (err.message.includes("REFERENCE constraint")) {
+                return res.status(400).json({
+                    message: "The user cannot be deleted because the user belongs to one or more groups. Please remove the user from groups before performing the deletion operation.",
+                });
+            }
+            res.status(500).json({ message: "Lỗi máy chủ.", error: err.message });
         }
     }
 }

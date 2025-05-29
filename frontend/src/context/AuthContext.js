@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import axios from "axios";
+
 const AuthContext = createContext();
+
 export const AuthProvider = ({ children }) => {
     const API_BASE = process.env.REACT_APP_API_BASE || "/api";
     const [user, setUser] = useState(null);
@@ -11,7 +13,8 @@ export const AuthProvider = ({ children }) => {
             try {
                 const storedUser = localStorage.getItem("user");
                 if (storedUser) {
-                    setUser(JSON.parse(storedUser));
+                    const parsedUser = JSON.parse(storedUser);
+                    setUser(parsedUser);
                 }
             } catch (error) {
                 console.error("Error fetching user:", error);
@@ -23,24 +26,21 @@ export const AuthProvider = ({ children }) => {
         fetchUser();
     }, []);
 
-
     const login = async (username, password) => {
         try {
             const response = await axios.post(`${API_BASE}/auth/login`, { username, password });
-            const { token, user } = response.data;
+            const { token, user, permissions } = response.data;
 
             setUser(user);
             localStorage.setItem("user", JSON.stringify(user));
             localStorage.setItem("token", token);
+            localStorage.setItem("permissions", JSON.stringify(permissions));
 
-            return { token, user };
+            return { token, user, permissions };
         } catch (error) {
             throw new Error(error.response?.data?.message || "Login failed");
         }
     };
-
-
-
 
     const logout = () => {
         setUser(null);

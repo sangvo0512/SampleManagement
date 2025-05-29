@@ -99,11 +99,40 @@ class SampleModel {
 
     static async deleteSample(id) {
         const pool = await poolPromise;
-        const result = await pool.request()
-            .input("sampleId", sql.Int, id)
-            .query("DELETE FROM Samples WHERE SampleID = @sampleId");
+        const transaction = new sql.Transaction(pool);
 
-        return result.rowsAffected[0];
+        try {
+            await transaction.begin();
+
+            // Lấy ItemCode của mẫu trước khi xóa
+            const sampleResult = await transaction.request()
+                .input("sampleId", sql.Int, id)
+                .query("SELECT ItemCode FROM Samples WHERE SampleID = @sampleId");
+
+            if (sampleResult.recordset.length === 0) {
+                throw new Error("Sample not found");
+            }
+
+            const itemCode = sampleResult.recordset[0].ItemCode;
+
+            // Xóa các bản ghi liên quan trong QRCodeDetails
+            await transaction.request()
+                .input("itemCode", sql.NVarChar, itemCode)
+                .query("DELETE FROM QRCodeDetails WHERE ItemCode = @itemCode");
+
+            // Xóa bản ghi trong Samples
+            const result = await transaction.request()
+                .input("sampleId", sql.Int, id)
+                .query("DELETE FROM Samples WHERE SampleID = @sampleId");
+
+            await transaction.commit();
+
+            return result.rowsAffected[0];
+        } catch (err) {
+            await transaction.rollback();
+            console.error("Error deleting sample:", err);
+            throw err;
+        }
     }
     static async getSampleByItemCode(itemCode) {
         const pool = await poolPromise;

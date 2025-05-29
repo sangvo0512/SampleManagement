@@ -7,24 +7,18 @@ import { useTranslation } from "react-i18next";
 const GroupManagementPage = () => {
     const API_BASE = process.env.REACT_APP_API_BASE || "/api";
     const { t } = useTranslation();
-
-
-    // State cho danh sách nhóm và loading
     const [groups, setGroups] = useState([]);
     const [loading, setLoading] = useState(false);
-    // State cho modal nhóm (tạo/chỉnh sửa)
     const [groupModalVisible, setGroupModalVisible] = useState(false);
     const [editingGroup, setEditingGroup] = useState(null);
     const [groupForm] = Form.useForm();
-    // State cho danh sách thành viên của nhóm đang chỉnh sửa
     const [groupUsers, setGroupUsers] = useState([]);
-    // State cho modal thêm user vào nhóm
     const [addUserModalVisible, setAddUserModalVisible] = useState(false);
     const [addUserForm] = Form.useForm();
-    // State cho toàn bộ người dùng và tìm kiếm (AutoComplete options)
     const [allUsers, setAllUsers] = useState([]);
     const [searchOptions, setSearchOptions] = useState([]);
-    // Lấy danh sách nhóm
+    const [selectedUserDisplay, setSelectedUserDisplay] = useState("");
+
     const fetchGroups = useCallback(
         async () => {
             setLoading(true);
@@ -39,7 +33,6 @@ const GroupManagementPage = () => {
         }, [API_BASE]
     );
 
-    // Lấy danh sách thành viên của một nhóm
     const fetchGroupUsers = async (groupId) => {
         try {
             const response = await axios.get(`${API_BASE}/groups/${groupId}/users`);
@@ -50,7 +43,6 @@ const GroupManagementPage = () => {
         }
     };
 
-    // Lấy danh sách tất cả user
     const fetchAllUsers = useCallback(
         async () => {
             try {
@@ -80,13 +72,12 @@ const GroupManagementPage = () => {
         );
         const options = filtered.map((user) => ({
             value: user.UserID.toString(),
-            label: `${user.FullName} (${user.Username})`
+            label: `${user.FullName} (${user.Username})`,
+            user
         }));
         setSearchOptions(options);
     };
 
-
-    // Xử lý tạo hoặc cập nhật nhóm
     const handleGroupSubmit = async (values) => {
         try {
             if (editingGroup) {
@@ -100,14 +91,13 @@ const GroupManagementPage = () => {
             setGroupModalVisible(false);
             groupForm.resetFields();
             setEditingGroup(null);
-            setGroupUsers([]); // Reset danh sách thành viên
+            setGroupUsers([]);
         } catch (error) {
             console.error("Error saving group:", error);
             message.error("Failed to save group");
         }
     };
 
-    // Xử lý xóa nhóm
     const handleDeleteGroup = async (groupId) => {
         try {
             await axios.delete(`${API_BASE}/groups/${groupId}`);
@@ -119,7 +109,6 @@ const GroupManagementPage = () => {
         }
     };
 
-    // Mở modal chỉnh sửa nhóm và tải danh sách thành viên
     const openEditGroup = async (group) => {
         setEditingGroup(group);
         groupForm.setFieldsValue({ groupName: group.GroupName });
@@ -127,7 +116,6 @@ const GroupManagementPage = () => {
         setGroupModalVisible(true);
     };
 
-    // Xử lý thêm user vào nhóm
     const handleAddUserToGroup = async (values) => {
         try {
             const payload = {
@@ -140,13 +128,13 @@ const GroupManagementPage = () => {
             setAddUserModalVisible(false);
             addUserForm.resetFields();
             setSearchOptions([]);
+            setSelectedUserDisplay(""); // Reset giá trị hiển thị
         } catch (error) {
             console.error("Error adding user to group:", error.response ? error.response.data : error);
             message.error("Failed to add user to group");
         }
     };
 
-    // Xử lý xóa user khỏi nhóm
     const handleRemoveUserFromGroup = async (groupId, userId) => {
         try {
             await axios.post(`${API_BASE}/groups/removeUser`, { userId, groupId });
@@ -158,7 +146,6 @@ const GroupManagementPage = () => {
         }
     };
 
-    // Các cột cho bảng nhóm
     const groupColumns = [
         { title: t("groupName"), dataIndex: "GroupName", key: "GroupName" },
         {
@@ -174,18 +161,14 @@ const GroupManagementPage = () => {
                         onConfirm={() => handleDeleteGroup(record.GroupID)}
                         okText={t("yes")}
                         cancelText={t("no")}
-                    ><Button type="danger" >
-                            {t("delete")}
-                        </Button>
-
+                    >
+                        <Button type="danger">{t("delete")}</Button>
                     </Popconfirm>
-
                 </>
             ),
         },
     ];
 
-    // Các cột cho bảng thành viên của nhóm
     const groupUsersColumns = [
         { title: t("fullname"), dataIndex: "FullName", key: "FullName" },
         { title: t("username"), dataIndex: "Username", key: "Username" },
@@ -220,7 +203,6 @@ const GroupManagementPage = () => {
                 </Button>
                 <Table columns={groupColumns} dataSource={groups} rowKey="GroupID" loading={loading} />
 
-                {/* Modal tạo/chỉnh sửa nhóm */}
                 <Modal
                     className="modal-custom"
                     title={editingGroup ? t("edit") : t("add")}
@@ -237,9 +219,9 @@ const GroupManagementPage = () => {
                         <Form.Item
                             name="groupName"
                             label={t("groupName")}
-                            rules={[{ required: true, message: "Please enter group name" }]}
+                            rules={[{ required: true, message: "Vui lòng nhập tên nhóm" }]}
                         >
-                            <Input placeholder="Enter group name" />
+                            <Input placeholder="Nhập tên nhóm" />
                         </Form.Item>
                     </Form>
                     {editingGroup && (
@@ -254,12 +236,13 @@ const GroupManagementPage = () => {
                 </Modal>
 
                 <Modal
-                    title="Add User to Group"
+                    title="Thêm Người Dùng Vào Nhóm"
                     open={addUserModalVisible}
                     onCancel={() => {
                         setAddUserModalVisible(false);
                         setSearchOptions([]);
                         addUserForm.resetFields();
+                        setSelectedUserDisplay("");
                     }}
                     onOk={() => addUserForm.submit()}
                 >
@@ -276,25 +259,38 @@ const GroupManagementPage = () => {
                         </Form.Item>
                         <Form.Item
                             name="userId"
-                            label="Search User by Username"
-                            rules={[{ required: true, message: "Please select a user" }]}
+                            label="Tìm Kiếm Người Dùng Theo Tên"
+                            rules={[{ required: true, message: "Vui lòng chọn một người dùng" }]}
+                            style={{ display: "none" }} // Ẩn Form.Item này
                         >
+                            <Input />
+                        </Form.Item>
+                        <Form.Item label="Tìm Kiếm Người Dùng Theo Tên">
                             <AutoComplete
                                 options={searchOptions}
-                                placeholder="Type username..."
+                                placeholder="Nhập tên người dùng..."
                                 onSearch={handleUserSearchModal}
-                                onSelect={(value) => {
-                                    addUserForm.setFieldsValue({ userId: value });
+                                onSelect={(value, option) => {
+                                    addUserForm.setFieldsValue({ userId: value }); // Lưu userId vào Form
+                                    setSelectedUserDisplay(option.label); // Cập nhật giá trị hiển thị
                                 }}
+                                onChange={(value, option) => {
+                                    if (option) {
+                                        setSelectedUserDisplay(option.label); // Hiển thị label khi chọn
+                                        addUserForm.setFieldsValue({ userId: option.value }); // Lưu userId
+                                    } else {
+                                        setSelectedUserDisplay(value || ""); // Hiển thị giá trị nhập tay
+                                        addUserForm.setFieldsValue({ userId: undefined }); // Xóa userId nếu không chọn
+                                    }
+                                }}
+                                value={selectedUserDisplay}
                                 filterOption={false}
                             />
                         </Form.Item>
                     </Form>
                 </Modal>
-
             </div>
         </div>
-
     );
 };
 

@@ -38,15 +38,17 @@ const TransactionFlowPage = () => {
         setLoading(true);
 
         // Kiểm tra dữ liệu bắt buộc
-        if (actionType === "Borrow" && (!formData.UserName || formData.UserName.trim() === "")) {
-            setLoading(false);
-            message.error(t("enterExecutorName"));
-            return;
-        }
-        if (!formData.DepartmentID) {
-            setLoading(false);
-            message.error(t("selectDepartment"));
-            return;
+        if (actionType === "Borrow") {
+            if (!formData.ToUserName || formData.ToUserName.trim() === "") {
+                setLoading(false);
+                message.error(t("enterExecutorName"));
+                return;
+            }
+            if (!formData.ToDepartmentID || !formData.ToDepartmentName) {
+                setLoading(false);
+                message.error(t("selectDepartment"));
+                return;
+            }
         }
         if (actionType === "Return" && (!formData.ReceiverName || !formData.ReceiverDeptID)) {
             setLoading(false);
@@ -66,13 +68,13 @@ const TransactionFlowPage = () => {
             }
         }
 
-        // Chuẩn bị dữ liệu giao dịch
-        const toDepartment = actionType === "Transfer" ? departments.find(d => d.DepartmentID === formData.ToDepartment) : null;
+        // Log để kiểm tra formData
+        console.log('TransactionFlowPage formData:', formData);
 
         const transactionData = {
             ActionType: actionType,
-            UserName: actionType === "Export" ? user.idNumber : (formData.UserName || user.idNumber),
-            DepartmentID: actionType === "Export" ? user.departmentId : formData.DepartmentID,
+            UserName: user.idNumber, // UserName từ user hiện tại
+            DepartmentID: user.departmentId, // DepartmentID từ user hiện tại
             QRCodeDataList: qrList.map(qrData => {
                 const parts = qrData.split("|");
                 const itemCode = parts[0];
@@ -83,6 +85,10 @@ const TransactionFlowPage = () => {
                     Quantity: 1
                 };
             }),
+            ...(actionType === "Borrow" ? {
+                ToUserName: formData.ToUserName,
+                ToDepartmentName: formData.ToDepartmentName // Lấy trực tiếp từ formData
+            } : {}),
             ...(actionType === "Return" ? {
                 ReceiverName: formData.ReceiverName || user.idNumber,
                 ReceiverDeptID: formData.ReceiverDeptID || user.departmentId
@@ -91,22 +97,16 @@ const TransactionFlowPage = () => {
                 ReceiverName: formData.ReceiverName,
                 ToUserName: formData.ReceiverName,
                 ToDepartment: formData.ToDepartment,
-                ToDepartmentName: toDepartment ? toDepartment.DepartmentName : null
+                ToDepartmentName: formData.ToDepartmentName
+            } : {}),
+            ...(actionType === "Export" ? {
+                OperationCodeID: formData.OperationCodeID
             } : {})
         };
 
-        // Kiểm tra bổ sung cho Export
-        if (actionType === "Export") {
-            if (!formData.OperationCodeID) {
-                setLoading(false);
-                message.error(t("selectExportReason"));
-                return;
-            }
-            transactionData.OperationCodeID = formData.OperationCodeID;
-        }
+        console.log('TransactionFlowPage transactionData:', transactionData); // Log để kiểm tra payload gửi đi
 
         try {
-            // Sử dụng endpoint chung cho tất cả giao dịch
             const endpoint = "/api/transaction";
             const response = await fetch(endpoint, {
                 method: "POST",
@@ -119,14 +119,12 @@ const TransactionFlowPage = () => {
                 throw new Error(result.message || result.error || t("failedToCompleteTransaction"));
             }
 
-            // Ánh xạ thông báo backend sang tiếng Việt
             const messageMap = {
                 TransactionSuccess: t("transactionSuccess", { actionType: t(actionType.toLowerCase()) })
             };
             const displayMessage = messageMap[result.message] || result.message;
             message.success(displayMessage);
 
-            // Reset state
             setQrList([]);
             setActionType(null);
             setFormData({});

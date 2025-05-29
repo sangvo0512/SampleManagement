@@ -128,5 +128,7 @@
     "na": "無資料",
     "transactionHistory": "交易歷史紀錄",
     "searchByItemCode": "依產品代碼搜尋",
-    "sortByActionType": "依操作類型排序"
+    "sortByActionType": "依操作類型排序",
+    "cannotDeleteUserInGroup": "無法刪除該用戶，因為該用戶屬於一個或多個群組。執行刪除操作之前，請先將使用者從群組中刪除。",
+    "saveChanges": "儲存變更"
 }

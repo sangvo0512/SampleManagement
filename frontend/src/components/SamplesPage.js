@@ -29,14 +29,18 @@ const SamplePage = () => {
     const [detailModalVisible, setDetailModalVisible] = useState(false);
     const [detailSample, setDetailSample] = useState(null);
 
-    const fetchSamples = useCallback(async () => {
+    const fetchSamples = useCallback(async (retryCount = 3) => {
         setLoading(true);
         try {
             const res = await axios.get(`${API_BASE}/samples`);
             setSamples(res.data);
             setFilteredSamples(res.data);
         } catch (err) {
-            message.error("Không thể tải dữ liệu sản phẩm mẫu");
+            if (retryCount > 0) {
+                setTimeout(() => fetchSamples(retryCount - 1), 1000);
+            } else {
+                message.error("Không thể tải dữ liệu sản phẩm mẫu");
+            }
         } finally {
             setLoading(false);
         }
@@ -62,7 +66,7 @@ const SamplePage = () => {
             message.success("Đã xóa sản phẩm");
             fetchSamples();
         } catch (err) {
-            message.error("Lỗi khi xóa sản phẩm");
+            message.error(err.response?.data?.error || "Không thể xóa sản phẩm. Vui lòng kiểm tra các mã QR liên quan.");
         }
     };
 
@@ -206,11 +210,9 @@ const SamplePage = () => {
         printWindow.document.close();
         console.log("Đã viết HTML vào printWindow");
 
-        // Đợi render rồi gọi print
         setTimeout(() => {
             console.log("Gọi printWindow.print()");
             printWindow.print();
-            // Không đóng cửa sổ ngay để kiểm tra
         }, 1000);
     };
 
@@ -220,14 +222,38 @@ const SamplePage = () => {
         formData.append("file", file);
 
         try {
-            // Import mà không lấy cột SerialNumber
-            await axios.post(`${API_BASE}/samples/import`, formData, {
+            const response = await axios.post(`${API_BASE}/samples/import`, formData, {
                 headers: { "Content-Type": "multipart/form-data" }
             });
-            message.success("Import thành công");
+
+            console.log("API Response:", response.data);
+
+            const { message: apiMessage, errors } = response.data;
+
+            if (Array.isArray(errors) && errors.length > 0) {
+                // Hiển thị lỗi chi tiết
+                const errorDetails = errors.map((err, index) => {
+                    return `${t("error")} ${index + 1}: ${err.error}`;
+                }).join("\n");
+
+                message.error({
+                    content: (
+                        <>
+                            <p>{apiMessage || t("importFailed")}</p>
+                            <p>{t("errorDetails")}:</p>
+                            <pre style={{ maxHeight: "200px", overflow: "auto" }}>{errorDetails}</pre>
+                        </>
+                    ),
+                    duration: 5,
+                });
+            } else {
+                message.success(apiMessage || t("importSuccess"));
+            }
+
             fetchSamples();
         } catch (err) {
-            message.error("Import thất bại");
+            console.error("Import Error:", err.response?.data || err);
+            message.error(err.response?.data?.error || t("importFailed"));
         }
 
         return false;
@@ -289,6 +315,7 @@ const SamplePage = () => {
         { title: t("borrowed"), dataIndex: "BorrowdQuantity" },
         {
             title: t("action"),
+            key: "action",
             render: (_, record) => (
                 <Space>
                     <Button type="primary" onClick={(e) => {
@@ -323,7 +350,6 @@ const SamplePage = () => {
         }
     ];
 
-
     return (
         <div className="sample-page">
             <h3>{t("sample")}</h3>
@@ -338,7 +364,9 @@ const SamplePage = () => {
                             { label: t("brand"), value: "Brand" },
                             { label: "BU", value: "BU" },
                             { label: t("season"), value: "Season" },
-                            { label: t("itemCode"), value: "ItemCode" }
+                            { label: t("itemCode"), value: "ItemCode" },
+                            { label: t("warehouse"), value: "InventoryLocation" },
+                            { label: t("state"), value: "State" }
                         ]}
                     />
                 </Col>
@@ -369,7 +397,7 @@ const SamplePage = () => {
 
                 <Col>
                     <a
-                        href="/template/Book2.xlsx"
+                        href="/template/Import_template.xlsx"
                         download
                     >
                         <Button icon={<DownloadOutlined />}>
@@ -388,7 +416,10 @@ const SamplePage = () => {
                 loading={loading}
                 pagination={{ pageSize: 10 }}
                 onRow={(record) => ({
-                    onClick: () => {
+                    onClick: (e) => {
+                        if (e.target.closest('button') || e.target.closest('.ant-popconfirm')) {
+                            return;
+                        }
                         setDetailSample(record);
                         setDetailModalVisible(true);
                     }
@@ -617,8 +648,6 @@ const SamplePage = () => {
                             ))}
                         </Select>
                     </Form.Item>
-
-
                 </Form>
             </Modal>
 

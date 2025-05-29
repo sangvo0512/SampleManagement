@@ -7,6 +7,7 @@ import "../../styles/TransactionFormStep.css";
 const { Title } = Typography;
 const { Option } = Select;
 
+// TransactionFormStep.js
 const TransactionFormStep = ({
     qrList,
     actionType,
@@ -91,7 +92,7 @@ const TransactionFormStep = ({
             };
 
             fetchBorrowerInfo();
-        } else if (actionType === "Export") {
+        } else if (actionType === "Borrow" || actionType === "Export") {
             form.setFieldsValue({
                 DepartmentID: user.departmentId,
                 UserName: user.idNumber
@@ -121,12 +122,19 @@ const TransactionFormStep = ({
             return;
         }
 
-        const toDepartment = actionType === "Transfer" ? departments.find(d => d.DepartmentID === values.ToDepartment) : null;
+        // Tìm tên bộ phận dựa trên DepartmentID được chọn
+        const selectedDepartment = departments.find(d => d.DepartmentID === values.DepartmentID);
+        if (actionType === "Borrow" && !selectedDepartment) {
+            message.error(t("invalidDepartment"));
+            return;
+        }
+
+        const toDepartment = actionType === "Transfer" ? departments.find(d => d.DepartmentID === values.ToDepartment) : selectedDepartment;
 
         const payload = {
             ActionType: actionType,
-            UserName: values.UserName || user.idNumber,
-            DepartmentID: values.DepartmentID || user.departmentId,
+            UserName: user.idNumber, // UserName từ user hiện tại
+            DepartmentID: user.departmentId, // DepartmentID từ user hiện tại
             QRCodeDataList: qrList.map(qrData => {
                 const parts = qrData.split("|");
                 const itemCode = parts[0];
@@ -138,6 +146,11 @@ const TransactionFormStep = ({
                 };
             }),
             Note: values.Note || "",
+            ...(actionType === "Borrow" ? {
+                ToUserName: values.UserName, // Người mượn
+                ToDepartmentID: values.DepartmentID, // ID bộ phận mượn
+                ToDepartmentName: selectedDepartment ? selectedDepartment.DepartmentName : null // Tên bộ phận mượn
+            } : {}),
             ...(actionType === "Return" ? {
                 ReceiverName: user.idNumber,
                 ReceiverDeptID: user.departmentId
@@ -153,6 +166,7 @@ const TransactionFormStep = ({
             } : {})
         };
 
+        console.log('TransactionFormStep payload:', payload); // Log để kiểm tra
         onSubmit(payload);
     };
 
@@ -162,7 +176,7 @@ const TransactionFormStep = ({
                 return (
                     <>
                         <Form.Item
-                            label={t("executedBy")}
+                            label={t("borrower")}
                             name="UserName"
                             rules={[
                                 { required: true, message: t("enterExecutorName") },
@@ -186,7 +200,6 @@ const TransactionFormStep = ({
                         </Form.Item>
                     </>
                 );
-
             case "Return":
                 return (
                     <>
@@ -249,7 +262,6 @@ const TransactionFormStep = ({
                         )}
                     </>
                 );
-
             case "Transfer":
                 return (
                     <>
@@ -304,7 +316,6 @@ const TransactionFormStep = ({
                         )}
                     </>
                 );
-
             case "Export":
                 return (
                     <>
@@ -349,7 +360,6 @@ const TransactionFormStep = ({
                         </Form.Item>
                     </>
                 );
-
             default:
                 return null;
         }
@@ -360,9 +370,6 @@ const TransactionFormStep = ({
             <Title level={4}>{t("transactionInfo")} - {t(actionType.toLowerCase())}</Title>
             <Form form={form} layout="vertical" onFinish={handleFinish}>
                 {renderFields()}
-                <Form.Item label={t("note")} name="Note">
-                    <Input.TextArea rows={3} placeholder={t("notePlaceholder")} />
-                </Form.Item>
                 <Form.Item>
                     <Button onClick={onBack} style={{ marginRight: 8 }}>
                         {t("back")}

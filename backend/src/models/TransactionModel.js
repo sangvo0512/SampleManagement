@@ -4,7 +4,6 @@ const SampleModel = require('./SampleModel');
 class TransactionModel {
     static async logProductAction({ ItemCode, ActionType, Quantity, TransactionID, UserName, DepartmentID, QRCodeID, OperationCodeID, DetailID, ToUserName, ToDepartmentName }, transaction) {
         try {
-            // Ánh xạ ActionType sang tiếng Anh
             const actionTypeMap = {
                 'Mượn': 'Borrow',
                 'Trả': 'Return',
@@ -15,8 +14,6 @@ class TransactionModel {
             if (!['Borrow', 'Return', 'Transfer', 'Export'].includes(normalizedActionType)) {
                 throw new Error(`Invalid ActionType: ${normalizedActionType}`);
             }
-
-            // Lấy tên bộ phận từ DepartmentID nếu có
             let departmentName = null;
             if (DepartmentID) {
                 const depResult = await transaction.request()
@@ -24,9 +21,9 @@ class TransactionModel {
                     .query(`SELECT DepartmentName FROM Departments WHERE DepartmentID = @DepartmentID`);
                 departmentName = depResult.recordset[0]?.DepartmentName || null;
             }
+
             console.log(`logProductAction: ItemCode=${ItemCode}, ActionType=${normalizedActionType}, QRCodeID=${QRCodeID}, OperationCodeID=${OperationCodeID}, ToUserName=${ToUserName}, ToDepartmentName=${ToDepartmentName}`);
 
-            // Chuẩn bị request để ghi log vào ProductLogs
             const request = transaction.request();
             request.input('ItemCode', sql.NVarChar(100), ItemCode);
             request.input('ActionType', sql.NVarChar(50), normalizedActionType);
@@ -40,7 +37,6 @@ class TransactionModel {
             request.input('ToUserName', sql.NVarChar(50), ToUserName || null);
             request.input('ToDepartmentName', sql.NVarChar(100), ToDepartmentName || null);
 
-            // Ghi log vào bảng ProductLogs
             await request.query(`
                 INSERT INTO ProductLogs
                 (ItemCode, ActionType, Quantity, TransactionID, UserName, DepartmentName, QRCodeID, Date, DetailID, OperationCodeID, ToUserName, ToDepartmentName)
@@ -66,6 +62,8 @@ class TransactionModel {
             throw new Error(`Invalid ActionType: ${normalizedActionType}`);
         }
 
+        console.log('createTransactionHeader:', { ActionType: normalizedActionType, UserName, DepartmentID, ToUserName, ToDepartmentName });
+
         const pool = await poolPromise;
         const request = pool.request()
             .input("ActionType", sql.NVarChar(50), normalizedActionType)
@@ -78,8 +76,8 @@ class TransactionModel {
         const result = await request.query(`
             INSERT INTO Transactions
             (ActionType, UserName, DepartmentID, TransactionDate, ToUserName, ToDepartmentName)
+            OUTPUT INSERTED.TransactionID
             VALUES (@ActionType, @UserName, @DepartmentID, @TransactionDate, @ToUserName, @ToDepartmentName);
-            SELECT SCOPE_IDENTITY() AS TransactionID;
         `);
         return result.recordset[0].TransactionID;
     }
@@ -135,13 +133,13 @@ class TransactionModel {
     static async createTransaction(data, transaction = null) {
         const { ActionType, UserName, DepartmentID, TransactionDate, items, OperationCodeID, ToUserName, ToDepartmentName } = data;
         const actionTypeMap = {
-            'Mượn': 'Borrow',
-            'Trả': 'Return',
-            'Chuyển giao': 'Transfer',
-            'Xuất kho': 'Export'
+            "Mượn": "Borrow",
+            "Trả": "Return",
+            "Chuyển giao": "Transfer",
+            "Xuất kho": "Export"
         };
         const normalizedActionType = actionTypeMap[ActionType.trim().toLowerCase()] || ActionType;
-        if (!['Borrow', 'Return', 'Transfer', 'Export'].includes(normalizedActionType)) {
+        if (!["Borrow", "Return", "Transfer", "Export"].includes(normalizedActionType)) {
             throw new Error(`Invalid ActionType: ${normalizedActionType}`);
         }
 
@@ -150,10 +148,8 @@ class TransactionModel {
 
         try {
             if (!transaction) await localTransaction.begin();
-            console.time(`createTransaction`);
 
             // Tạo Transaction header
-            console.time(`insert_transaction`);
             const transactionId = await this.createTransactionHeader({
                 ActionType: normalizedActionType,
                 UserName,
@@ -162,10 +158,6 @@ class TransactionModel {
                 ToUserName,
                 ToDepartmentName
             });
-            console.timeEnd(`insert_transaction`);
-
-            // Tải tất cả mẫu liên quan
-            console.time(`load_samples`);
             const itemCodes = [...new Set(items.map(item => item.ItemCode))];
             let samples = {};
             if (itemCodes.length > 0) {
@@ -183,10 +175,6 @@ class TransactionModel {
                     return acc;
                 }, {});
             }
-            console.timeEnd(`load_samples`);
-
-            // Tải trạng thái QRCodeDetails
-            console.time(`load_qr_status`);
             const qrCodeIds = items.map(item => `${item.ItemCode}-${item.QRIndex}`);
             let qrStatuses = {};
             if (qrCodeIds.length > 0) {
@@ -204,10 +192,7 @@ class TransactionModel {
                     return acc;
                 }, {});
             }
-            console.timeEnd(`load_qr_status`);
 
-            // Tải DepartmentName
-            console.time(`load_department`);
             let departmentName = null;
             if (DepartmentID) {
                 const depResult = await localTransaction.request()
@@ -215,14 +200,10 @@ class TransactionModel {
                     .query(`SELECT DepartmentName FROM Departments WITH (NOLOCK) WHERE DepartmentID = @DepartmentID`);
                 departmentName = depResult.recordset[0]?.DepartmentName || null;
             }
-            console.timeEnd(`load_department`);
 
-            // Cập nhật Samples và QRCodeDetails
             const sampleUpdates = {};
-            console.time(`process_items`);
             const itemQuantities = {};
             for (const item of items) {
-                console.time(`item_${item.ItemCode}_${item.QRIndex}`);
                 const QRIndex = parseInt(item.QRIndex);
                 if (isNaN(QRIndex)) {
                     throw new Error(`QRIndex không hợp lệ: ${item.QRIndex}`);
@@ -262,10 +243,8 @@ class TransactionModel {
                         throw new Error(`Mã QR ${QRCodeID} phải ở trạng thái 'Borrowed' để chuyển giao (trạng thái: ${qrStatus}).`);
                     }
                 }
-                console.timeEnd(`item_${item.ItemCode}_${item.QRIndex}`);
             }
 
-            // Cập nhật Samples
             if (normalizedActionType === 'Borrow' || normalizedActionType === 'Export') {
                 for (const itemCode in itemQuantities) {
                     const sample = samples[itemCode];
@@ -278,7 +257,6 @@ class TransactionModel {
                 }
             }
 
-            console.time(`update_qrcodes`);
             if (normalizedActionType === 'Borrow' || normalizedActionType === 'Export') {
                 const status = normalizedActionType === 'Borrow' ? 'Borrowed' : 'Exported';
                 const request = localTransaction.request();
@@ -292,17 +270,12 @@ class TransactionModel {
                     WHERE QRCodeID IN (${qrCodeIds.map((_, i) => `@QRCodeID${i}`).join(',')})
                 `);
             }
-            console.timeEnd(`update_qrcodes`);
 
-            console.time(`update_samples`);
             for (const [itemCode, update] of Object.entries(sampleUpdates)) {
                 await SampleModel.updateSampleByItemCode(itemCode, update, localTransaction);
             }
-            console.timeEnd(`update_samples`);
 
-            console.time(`insert_details_and_logs`);
             for (const item of items) {
-                console.time(`detail_${item.ItemCode}_${item.QRIndex}`);
                 const QRIndex = parseInt(item.QRIndex);
                 const QRCodeID = `${item.ItemCode}-${QRIndex}`;
                 const detailId = await this.createTransactionDetail({
@@ -327,11 +300,8 @@ class TransactionModel {
                     ToUserName,
                     ToDepartmentName
                 }, localTransaction);
-                console.timeEnd(`detail_${item.ItemCode}_${item.QRIndex}`);
             }
-            console.timeEnd(`insert_details_and_logs`);
 
-            console.timeEnd(`createTransaction`);
             if (!transaction) await localTransaction.commit();
             return transactionId;
         } catch (error) {

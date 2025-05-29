@@ -1,33 +1,43 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import axios from "axios";
 
 export const PermissionContext = createContext();
 
 export const PermissionProvider = ({ children }) => {
     const [permissions, setPermissions] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
 
-    // Đọc từ localStorage khi load lần đầu
     useEffect(() => {
         const stored = localStorage.getItem("permissions");
         if (stored) {
             setPermissions(JSON.parse(stored));
         }
+        setIsLoading(false);
     }, []);
 
-    const updatePermissions = (newPermissions) => {
-        setPermissions(newPermissions);
-        localStorage.setItem("permissions", JSON.stringify(newPermissions));
-    };
+    const updatePermissions = useCallback((newPermissions) => {
+        setPermissions((prev) => {
+            // Chỉ cập nhật nếu quyền mới khác quyền hiện tại
+            if (JSON.stringify(prev) !== JSON.stringify(newPermissions)) {
+                localStorage.setItem("permissions", JSON.stringify(newPermissions));
+                return newPermissions;
+            }
+            return prev;
+        });
+    }, []);
 
-    const fetchPermissionsFromServer = async (userId) => {
+    const fetchPermissionsFromServer = useCallback(async (userId) => {
         try {
-            const res = await axios.get(`/api/permissions/effective/${userId}`);
-            console.log("Permissions API response:", res.data); // 👈 log kiểm tra
+            setIsLoading(true);
+            const res = await axios.get(`/api/permissions/effective/${userId}`, {
+                headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+            });
+            console.log("Permissions API response:", res.data);
 
             const rawData = res.data;
             const permissionArray = Array.isArray(rawData)
                 ? rawData
-                : Array.isArray(rawData.permissions) // nếu data nằm trong field `permissions`
+                : Array.isArray(rawData.permissions)
                     ? rawData.permissions
                     : [];
 
@@ -35,11 +45,13 @@ export const PermissionProvider = ({ children }) => {
             updatePermissions(permissionKeys);
         } catch (error) {
             console.error("Failed to fetch permissions:", error);
+        } finally {
+            setIsLoading(false);
         }
-    };
+    }, [updatePermissions]);
 
     return (
-        <PermissionContext.Provider value={{ permissions, updatePermissions, fetchPermissionsFromServer }}>
+        <PermissionContext.Provider value={{ permissions, updatePermissions, fetchPermissionsFromServer, isLoading }}>
             {children}
         </PermissionContext.Provider>
     );

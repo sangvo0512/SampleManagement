@@ -15,7 +15,8 @@ class TransactionController {
                 ToDepartmentName
             } = req.body;
 
-            // Ánh xạ ActionType sang tiếng Anh
+            console.log('createTransaction req.body:', req.body); // Log để kiểm tra dữ liệu nhận được
+
             const actionTypeMap = {
                 'Mượn': 'Borrow',
                 'Trả': 'Return',
@@ -32,6 +33,9 @@ class TransactionController {
             }
             if (!UserName || !DepartmentID) {
                 return res.status(400).json({ message: "Thiếu thông tin người thực hiện hoặc bộ phận." });
+            }
+            if (normalizedActionType === 'Borrow' && (!ToUserName || !ToDepartmentName)) {
+                return res.status(400).json({ message: "Thiếu thông tin người mượn hoặc bộ phận mượn." });
             }
             if (normalizedActionType === 'Export' && !OperationCodeID) {
                 return res.status(400).json({ message: "Thiếu lý do xuất kho (OperationCodeID)." });
@@ -51,33 +55,21 @@ class TransactionController {
 
                 const result = await pool.request()
                     .input('QRCodeID', sql.NVarChar(150), QRCodeID)
-                    .query(`
-                        SELECT Status
-                        FROM QRCodeDetails
-                        WHERE QRCodeID = @QRCodeID
-                    `);
+                    .query(`SELECT Status FROM QRCodeDetails WHERE QRCodeID = @QRCodeID`);
 
                 if (result.recordset.length === 0) {
-                    return res.status(404).json({
-                        message: `Mã QR ${QRCodeID} không tồn tại.`
-                    });
+                    return res.status(404).json({ message: `Mã QR ${QRCodeID} không tồn tại.` });
                 }
 
                 const status = result.recordset[0].Status;
                 if (normalizedActionType === 'Borrow' && status !== 'Available') {
-                    return res.status(400).json({
-                        message: `Mã QR ${QRCodeID} không khả dụng để mượn (trạng thái: ${status}).`
-                    });
+                    return res.status(400).json({ message: `Mã QR ${QRCodeID} không khả dụng để mượn (trạng thái: ${status}).` });
                 }
                 if (normalizedActionType === 'Export' && status !== 'Available') {
-                    return res.status(400).json({
-                        message: `Mã QR ${QRCodeID} không khả dụng để xuất kho (trạng thái: ${status}).`
-                    });
+                    return res.status(400).json({ message: `Mã QR ${QRCodeID} không khả dụng để xuất kho (trạng thái: ${status}).` });
                 }
                 if (normalizedActionType === 'Transfer' && status !== 'Borrowed') {
-                    return res.status(400).json({
-                        message: `Mã QR ${QRCodeID} phải ở trạng thái 'Borrowed' để chuyển giao (trạng thái: ${status}).`
-                    });
+                    return res.status(400).json({ message: `Mã QR ${QRCodeID} phải ở trạng thái 'Borrowed' để chuyển giao (trạng thái: ${status}).` });
                 }
             }
 
@@ -97,13 +89,13 @@ class TransactionController {
 
             const transactionId = await TransactionModel.createTransaction({
                 ActionType: normalizedActionType,
-                UserName,
-                DepartmentID,
+                UserName, // UserName từ user hiện tại
+                DepartmentID, // DepartmentID từ user hiện tại
                 TransactionDate: new Date(),
                 items,
                 OperationCodeID,
-                ToUserName,
-                ToDepartmentName
+                ToUserName, // ToUserName từ người mượn
+                ToDepartmentName // ToDepartmentName từ người mượn
             });
 
             return res.status(201).json({
@@ -187,8 +179,8 @@ class TransactionController {
             const transactions = result.recordset.map(record => ({
                 TransactionID: record.TransactionID,
                 ActionType: record.ActionType,
-                UserName: record.ActionType === 'Transfer' ? record.ToUserName : record.UserName,
-                DepartmentName: record.ActionType === 'Transfer' ? record.ToDepartmentName : record.DepartmentName,
+                UserName: record.ActionType === 'Borrow' ? record.ToUserName : record.ToUserName || record.UserName, // Lấy ToUserName cho Borrow
+                DepartmentName: record.ActionType === 'Borrow' ? record.ToDepartmentName : record.ToDepartmentName || record.DepartmentName, // Lấy ToDepartmentName cho Borrow
                 QRCodeID: record.QRCodeID,
                 TransactionDate: record.TransactionDate
             }));
@@ -200,11 +192,67 @@ class TransactionController {
         }
     }
 
+    // static async handleBorrow(data) {
+    //     try {
+    //         const { ItemCode, Quantity, QRCodeDataList, UserName, DepartmentID } = data;
+    //         if (!QRCodeDataList || !Array.isArray(QRCodeDataList) || QRCodeDataList.length === 0) {
+    //             return { success: false, message: "Danh sách QRCodeID không hợp lệ." };
+    //         }
+
+    //         const pool = await poolPromise;
+    //         for (const qr of QRCodeDataList) {
+    //             const QRCodeID = qr.QRCodeID;
+    //             const QRIndex = parseInt(qr.QRCodeID?.split("-").pop());
+    //             if (isNaN(QRIndex)) {
+    //                 return { success: false, message: `QRIndex không hợp lệ: ${QRCodeID}` };
+    //             }
+
+    //             const result = await pool.request()
+    //                 .input('QRCodeID', sql.NVarChar(150), QRCodeID)
+    //                 .query(`
+    //                     SELECT Status
+    //                     FROM QRCodeDetails
+    //                     WHERE QRCodeID = @QRCodeID
+    //                 `);
+
+    //             if (result.recordset.length === 0) {
+    //                 return { success: false, message: `Mã QR ${QRCodeID} không tồn tại.` };
+    //             }
+
+    //             const status = result.recordset[0].Status;
+    //             if (status !== 'Available') {
+    //                 return { success: false, message: `Mã QR ${QRCodeID} không khả dụng để mượn (trạng thái: ${status}).` };
+    //             }
+    //         }
+
+    //         const transactionId = await TransactionModel.createTransaction({
+    //             ActionType: 'Borrow',
+    //             UserName,
+    //             DepartmentID,
+    //             TransactionDate: new Date(),
+    //             items: QRCodeDataList.map(qr => ({
+    //                 ItemCode,
+    //                 QRIndex: parseInt(qr.QRCodeID.split("-").pop()),
+    //                 QRCodeID: qr.QRCodeID,
+    //                 QRCodeData: qr.QRCodeData || null,
+    //                 Quantity: qr.Quantity || 1
+    //             }))
+    //         });
+
+    //         return { success: true, message: "Mượn sản phẩm thành công.", transactionId };
+    //     } catch (error) {
+    //         console.error("Lỗi xử lý mượn:", error);
+    //         return { success: false, message: error.message || "Lỗi máy chủ khi mượn sản phẩm." };
+    //     }
+    // }
     static async handleBorrow(data) {
         try {
-            const { ItemCode, Quantity, QRCodeDataList, UserName, DepartmentID } = data;
+            const { ItemCode, Quantity, QRCodeDataList, UserName, DepartmentID, ToUserName, ToDepartmentName } = data;
             if (!QRCodeDataList || !Array.isArray(QRCodeDataList) || QRCodeDataList.length === 0) {
                 return { success: false, message: "Danh sách QRCodeID không hợp lệ." };
+            }
+            if (!ToUserName || !ToDepartmentName) {
+                return { success: false, message: "Thiếu thông tin người mượn hoặc bộ phận mượn." };
             }
 
             const pool = await poolPromise;
@@ -217,11 +265,7 @@ class TransactionController {
 
                 const result = await pool.request()
                     .input('QRCodeID', sql.NVarChar(150), QRCodeID)
-                    .query(`
-                        SELECT Status
-                        FROM QRCodeDetails
-                        WHERE QRCodeID = @QRCodeID
-                    `);
+                    .query(`SELECT Status FROM QRCodeDetails WHERE QRCodeID = @QRCodeID`);
 
                 if (result.recordset.length === 0) {
                     return { success: false, message: `Mã QR ${QRCodeID} không tồn tại.` };
@@ -235,8 +279,8 @@ class TransactionController {
 
             const transactionId = await TransactionModel.createTransaction({
                 ActionType: 'Borrow',
-                UserName,
-                DepartmentID,
+                UserName, // UserName từ user hiện tại
+                DepartmentID, // DepartmentID từ user hiện tại
                 TransactionDate: new Date(),
                 items: QRCodeDataList.map(qr => ({
                     ItemCode,
@@ -244,7 +288,9 @@ class TransactionController {
                     QRCodeID: qr.QRCodeID,
                     QRCodeData: qr.QRCodeData || null,
                     Quantity: qr.Quantity || 1
-                }))
+                })),
+                ToUserName, // Lưu thông tin người mượn
+                ToDepartmentName // Lưu thông tin bộ phận người mượn
             });
 
             return { success: true, message: "Mượn sản phẩm thành công.", transactionId };
@@ -253,7 +299,6 @@ class TransactionController {
             return { success: false, message: error.message || "Lỗi máy chủ khi mượn sản phẩm." };
         }
     }
-
     static async handleReturn(data) {
         let transaction;
         try {
@@ -724,9 +769,7 @@ class TransactionController {
 
             query += ` ORDER BY pl.Date DESC`;
 
-            console.log('Executing Query:', query);
             const result = await request.query(query);
-            console.log('Query Result Count:', result.recordset.length);
             return res.status(200).json(result.recordset);
         } catch (error) {
             console.error('Lỗi lấy lịch sử giao dịch:', error);
