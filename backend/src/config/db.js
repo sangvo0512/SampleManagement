@@ -14,7 +14,7 @@ const config = {
     pool: {
         max: 20, // Số kết nối tối đa.
         min: 0,
-        // idleTimeoutMillis: 30000 // Thời gian chờ đóng kết nối nhàn rỗi.
+        idleTimeoutMillis: 300000 // Thời gian chờ đóng kết nối nhàn rỗi.
     },
     requestTimeout: 15000 //Thời gian chờ phản hổi.
 };
@@ -22,7 +22,7 @@ const config = {
 const poolPromise = new sql.ConnectionPool(config)
     .connect()
     .then(pool => {
-        console.log('Connected to SQL Server');
+        console.log('Connected to Sample Management SQL Server');
         return pool;
     })
     .catch(err => console.error('Database Connection Failed!', err));

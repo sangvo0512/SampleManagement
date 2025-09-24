@@ -41,6 +41,27 @@
     border-radius: 8px !important;
 }
 
+/* Container cho hai hàng */
+.filter-row,
+.action-row {
+    margin-bottom: 16px;
+}
+
+.filter-row .ant-col,
+.action-row .ant-col {
+    display: flex;
+    align-items: center;
+}
+
+.filter-row .ant-input-search,
+.filter-row .ant-select {
+    width: 100%;
+}
+
+.action-row .ant-btn {
+    width: 100%;
+}
+
 /* Tiêu đề trang */
 .sample-page h3 {
     font-size: 1.8rem;

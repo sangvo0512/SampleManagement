@@ -19,6 +19,7 @@ router.post("/login", async (req, res, next) => {
 
         try {
             const pool = await poolPromise;
+            // console.log("User AD:", user);
             const result = await pool
                 .request()
                 .input("username", sql.NVarChar, user.sAMAccountName)

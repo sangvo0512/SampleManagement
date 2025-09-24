@@ -18,7 +18,7 @@ router.post('/', async (req, res) => {
 router.get('/', TransactionController.getAllTransactions);
 
 // Lấy giao dịch theo ItemCode
-router.get('/item/:itemCode', TransactionController.getTransactionsByItemCode);
+router.get('/item/:itemCode', TransactionController.getTransactionsByUniqueKey);
 
 // Lấy thông tin giao dịch mượn theo danh sách QRCodeID
 router.post('/borrow', TransactionController.getBorrowTransactionsByQRCodes);
@@ -29,4 +29,8 @@ router.delete('/:id', TransactionController.deleteTransaction);
 
 //Lấy log
 router.get('/logs', TransactionController.getProductLogs);
+
+//Lấy trạng thái mã QR
+router.get('/qrcode/status', TransactionController.getQRCodeStatus);
+
 module.exports = router;

@@ -20,7 +20,7 @@ const UserManagement = () => {
         async () => {
             setLoading(true);
             try {
-                const response = await axios.get(`${API_BASE}/users`);
+                const response = await axios.get(`${API_BASE}/users?ts=${Date.now()}`);
                 setUsers(response.data);
             } catch (error) {
                 console.error("Error fetching users:", error);
@@ -31,7 +31,7 @@ const UserManagement = () => {
 
     const fetchDepartments = useCallback(async () => {
         try {
-            const response = await axios.get(`${API_BASE}/departments`);
+            const response = await axios.get(`${API_BASE}/departments?ts=${Date.now()}`);
             setDepartments(response.data);
         } catch (error) {
             console.error("Error fetching departments:", error);

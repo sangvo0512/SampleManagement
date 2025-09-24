@@ -1,12 +1,11 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { Users, Shield, Warehouse, Tags, Database } from "lucide-react";
+import { Users, Shield, Warehouse, Tags, Database, UserRoundCheck } from "lucide-react";
 import "../styles/SystemManagementPage.css";
 import { useTranslation } from "react-i18next";
 const SystemManagementPage = () => {
     const { t } = useTranslation();
     return (
-
         <div className="system-container">
             <div className="content-container">
                 {/* Users management */}
@@ -49,6 +48,13 @@ const SystemManagementPage = () => {
                     <div className="card">
                         <Database className="card-icon" />
                         <h2 className="card-title">{t("operationCode")}</h2>
+                    </div>
+                </Link>
+                {/* Borrower management*/}
+                <Link to={"/borrowers"} className="card-link">
+                    <div className="card">
+                        <UserRoundCheck className="card-icon" />
+                        <h2 className="card-title">{t("borrowerManagement")}</h2>
                     </div>
                 </Link>
             </div>

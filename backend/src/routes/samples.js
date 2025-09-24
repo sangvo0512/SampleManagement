@@ -21,4 +21,7 @@ router.delete("/:id", SampleController.deleteSample);
 // Import sản phẩm mẫu từ file Excel
 router.post("/import", upload.single("file"), SampleController.importSamples);
 
+// Xuất sản phẩm mẫu có trạng thái Available
+router.get('/export-available-and-borrowed', SampleController.exportAvailableAndBorrowed);
+
 module.exports = router;

@@ -19,6 +19,7 @@ const TransactionFlowPage = () => {
     const [departments, setDepartments] = useState([]);
     const [operationCodes, setOperationCodes] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [qrStatuses, setQrStatuses] = useState({});
     const { user } = useAuth();
     const { t } = useTranslation();
 
@@ -44,67 +45,100 @@ const TransactionFlowPage = () => {
                 message.error(t("enterExecutorName"));
                 return;
             }
-            if (!formData.ToDepartmentID || !formData.ToDepartmentName) {
+            if (!formData.ToDepartmentName) {
                 setLoading(false);
                 message.error(t("selectDepartment"));
                 return;
             }
         }
-        if (actionType === "Return" && (!formData.ReceiverName || !formData.ReceiverDeptID)) {
-            setLoading(false);
-            message.error(t("enterReceiverInfo"));
-            return;
-        }
-        if (actionType === "Transfer") {
-            if (!formData.ToDepartment) {
+        if (actionType === "Return") {
+            if (!formData.UserName || !formData.DepartmentName) {
                 setLoading(false);
-                message.error(t("selectReceiverDepartment"));
+                message.error(t("missingBorrowerInfo"));
                 return;
             }
+            if (!formData.ReceiverName || !formData.ToDepartmentName) {
+                setLoading(false);
+                message.error(t("missingReceiverInfo"));
+                return;
+            }
+        }
+        if (actionType === "Transfer") {
             if (!formData.ReceiverName || formData.ReceiverName.trim() === "") {
                 setLoading(false);
                 message.error(t("enterReceiverName"));
                 return;
             }
+            if (!formData.ToDepartmentName) {
+                setLoading(false);
+                message.error(t("selectReceiverDepartment"));
+                return;
+            }
+        }
+        if (actionType === "Export") {
+            if (!formData.OperationCodeID) {
+                setLoading(false);
+                message.error(t("selectExportReason"));
+                return;
+            }
+            if (!formData.ToUserName || formData.ToUserName.trim() === "") {
+                setLoading(false);
+                message.error(t("enterToUserName"));
+                return;
+            }
+        }
+        if (actionType === "Reject") {
+            if (!formData.OperationCodeID) {
+                setLoading(false);
+                message.error(t("selectExportReason"));
+                return;
+            }
         }
 
-        // Log để kiểm tra formData
         console.log('TransactionFlowPage formData:', formData);
 
         const transactionData = {
             ActionType: actionType,
-            UserName: user.idNumber, // UserName từ user hiện tại
-            DepartmentID: user.departmentId, // DepartmentID từ user hiện tại
-            QRCodeDataList: qrList.map(qrData => {
+            UserName: actionType === "Borrow" || actionType === "Export" || actionType === "Reject" ? user.idNumber : formData.UserName,
+            DepartmentName: actionType === "Borrow" || actionType === "Export" || actionType === "Reject" ? departments.find(d => d.DepartmentID === user.departmentId)?.DepartmentName : formData.DepartmentName,
+            QRCodeDataList: formData.QRCodeDataList || qrList.map(qrData => {
                 const parts = qrData.split("|");
-                const itemCode = parts[0];
+                const uniqueKey = parts[0];
                 const qrIndex = parts[parts.length - 1];
+                const itemCode = uniqueKey.split("-")[0];
                 return {
-                    QRCodeID: `${itemCode}-${qrIndex}`,
-                    ItemCode: itemCode,
+                    QRCodeID: qrData,
+                    ItemCode: itemCode || uniqueKey,
+                    UniqueKey: uniqueKey,
                     Quantity: 1
                 };
             }),
             ...(actionType === "Borrow" ? {
                 ToUserName: formData.ToUserName,
-                ToDepartmentName: formData.ToDepartmentName // Lấy trực tiếp từ formData
+                ToDepartmentName: formData.ToDepartmentName
             } : {}),
             ...(actionType === "Return" ? {
+                UserName: formData.UserName,
+                DepartmentName: formData.DepartmentName,
                 ReceiverName: formData.ReceiverName || user.idNumber,
-                ReceiverDeptID: formData.ReceiverDeptID || user.departmentId
+                ReceiverDeptID: formData.ReceiverDeptID || user.departmentId,
+                ToDepartmentName: formData.ToDepartmentName
             } : {}),
             ...(actionType === "Transfer" ? {
+                UserName: formData.UserName,
+                DepartmentName: formData.DepartmentName,
                 ReceiverName: formData.ReceiverName,
                 ToUserName: formData.ReceiverName,
-                ToDepartment: formData.ToDepartment,
                 ToDepartmentName: formData.ToDepartmentName
             } : {}),
             ...(actionType === "Export" ? {
+                OperationCodeID: formData.OperationCodeID,
+                ToUserName: formData.ToUserName
+            } : {}),
+            ...(actionType === "Reject" ? {
                 OperationCodeID: formData.OperationCodeID
             } : {})
         };
-
-        console.log('TransactionFlowPage transactionData:', transactionData); // Log để kiểm tra payload gửi đi
 
         try {
             const endpoint = "/api/transaction";
@@ -130,7 +164,7 @@ const TransactionFlowPage = () => {
             setFormData({});
             setCurrentStep(0);
         } catch (error) {
-            console.error("Lỗi khi gửi giao dịch:", error.message);
+            console.error("Failed transaction:", error.message);
             message.error(error.message || t("transactionError"));
         } finally {
             setLoading(false);
@@ -144,7 +178,10 @@ const TransactionFlowPage = () => {
                 <ScanCartStep
                     qrList={qrList}
                     setQrList={setQrList}
-                    onNext={() => setCurrentStep(currentStep + 1)}
+                    onNext={(qrStatuses) => {
+                        setQrStatuses(qrStatuses);    // Lưu trạng thái QR vào state cha
+                        setCurrentStep(currentStep + 1);
+                    }}
                 />
             )
         },
@@ -154,6 +191,7 @@ const TransactionFlowPage = () => {
                 <SelectTransactionType
                     actionType={actionType}
                     setActionType={setActionType}
+                    qrStatuses={qrStatuses}          // ✅ truyền xuống
                     onNext={() => setCurrentStep(currentStep + 1)}
                     onBack={() => setCurrentStep(currentStep - 1)}
                 />

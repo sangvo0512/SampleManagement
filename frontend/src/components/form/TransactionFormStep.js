@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from "react";
-import { Form, Input, Button, Typography, Select, message } from "antd";
+import { Form, Input, Button, Typography, Select, message, Modal, Table } from "antd";
 import { useAuth } from "../../context/AuthContext";
+import { ArrowRightOutlined, ArrowLeftOutlined, ContactsOutlined } from '@ant-design/icons';
 import { useTranslation } from "react-i18next";
 import "../../styles/TransactionFormStep.css";
 
 const { Title } = Typography;
 const { Option } = Select;
+const { Search } = Input;
 
-// TransactionFormStep.js
 const TransactionFormStep = ({
     qrList,
     actionType,
@@ -22,6 +23,29 @@ const TransactionFormStep = ({
     const { t } = useTranslation();
     const [borrowerInfo, setBorrowerInfo] = useState(null);
     const [borrowerError, setBorrowerError] = useState(null);
+    const [borrowers, setBorrowers] = useState([]);
+    const [modalVisible, setModalVisible] = useState(false);
+    const [receiverModalVisible, setReceiverModalVisible] = useState(false); // Modal cho Receiver
+    const [searchTerm, setSearchTerm] = useState('');
+
+    // Fetch danh sách Borrower
+    useEffect(() => {
+        const fetchBorrowers = async () => {
+            try {
+                const response = await fetch("/api/borrowers");
+                const result = await response.json();
+                if (response.ok && result.success) {
+                    setBorrowers(result.data || []);
+                } else {
+                    throw new Error(result.message || t("failedToFetchBorrowers"));
+                }
+            } catch (error) {
+                console.error('Lỗi khi lấy danh sách Borrower:', error);
+                message.error(t("failedToFetchBorrowers"));
+            }
+        };
+        fetchBorrowers();
+    }, [t]);
 
     useEffect(() => {
         form.resetFields();
@@ -34,14 +58,24 @@ const TransactionFormStep = ({
             return;
         }
 
+        const userDepartmentName = departments.find(d => d.DepartmentID === user.departmentId)?.DepartmentName;
+        if (!userDepartmentName) {
+            console.error('DepartmentID của user không hợp lệ:', user.departmentId);
+            setBorrowerError(t("invalidUserDepartment"));
+            return;
+        }
+
         if ((actionType === "Return" || actionType === "Transfer") && qrList.length > 0) {
             const fetchBorrowerInfo = async () => {
                 try {
                     const qrCodeIds = qrList.map(qrData => {
                         const parts = qrData.split("|");
-                        const itemCode = parts[0];
-                        const qrIndex = parts[parts.length - 1];
-                        return `${itemCode}-${qrIndex}`;
+                        if (parts.length < 2) {
+                            throw new Error(`Định dạng QR không hợp lệ: ${qrData}`);
+                        }
+                        const uniqueKey = parts[0].trim();
+                        const qrIndex = parts[parts.length - 1].trim();
+                        return `${uniqueKey}|${qrIndex}`;
                     });
 
                     const response = await fetch("/api/transaction/borrow", {
@@ -70,18 +104,17 @@ const TransactionFormStep = ({
                         return;
                     }
 
-                    const department = departments.find(d => d.DepartmentName === result.data[0].DepartmentName);
                     setBorrowerInfo({
                         UserName: result.data[0].UserName,
-                        DepartmentName: result.data[0].DepartmentName,
-                        DepartmentID: department ? department.DepartmentID : null
+                        DepartmentName: result.data[0].DepartmentName
                     });
+
                     form.setFieldsValue({
                         UserName: result.data[0].UserName,
-                        DepartmentID: department ? department.DepartmentID : null,
+                        DepartmentName: result.data[0].DepartmentName,
                         ...(actionType === "Return" ? {
                             ReceiverName: user.idNumber,
-                            ReceiverDeptID: user.departmentId
+                            ReceiverDeptName: userDepartmentName  // Thay ReceiverDeptID bằng ReceiverDeptName
                         } : {})
                     });
                 } catch (error) {
@@ -92,83 +125,141 @@ const TransactionFormStep = ({
             };
 
             fetchBorrowerInfo();
-        } else if (actionType === "Borrow" || actionType === "Export") {
+        } else if (actionType === "Borrow" || actionType === "Export" || actionType === "Reject") {
             form.setFieldsValue({
-                DepartmentID: user.departmentId,
-                UserName: user.idNumber
+                // Không cần DepartmentID nữa, chỉ dùng Name ở payload
             });
         }
     }, [actionType, qrList, form, departments, user, t]);
 
     const handleFinish = (values) => {
+        console.log('Form values:', values);
+
         if (qrList.length === 0) {
             message.warning(t("emptyCart"));
             return;
         }
 
         if (actionType === "Transfer") {
-            if (!values.ToDepartment) {
-                message.error(t("selectReceiverDepartment"));
-                return;
-            }
             if (!values.ReceiverName || values.ReceiverName.trim() === "") {
                 message.error(t("enterReceiverName"));
                 return;
             }
+            if (!values.ToDepartmentName) {
+                message.error(t("selectReceiverDepartment"));
+                return;
+            }
         }
 
-        if (actionType === "Export" && !values.OperationCodeID) {
+        if ((actionType === "Export") && !values.OperationCodeID) {
             message.error(t("selectExportReason"));
             return;
         }
 
-        // Tìm tên bộ phận dựa trên DepartmentID được chọn
-        const selectedDepartment = departments.find(d => d.DepartmentID === values.DepartmentID);
-        if (actionType === "Borrow" && !selectedDepartment) {
-            message.error(t("invalidDepartment"));
+        if (actionType === "Export" && !values.ToUserName) {
+            message.error(t("enterToUserName"));
             return;
         }
 
-        const toDepartment = actionType === "Transfer" ? departments.find(d => d.DepartmentID === values.ToDepartment) : selectedDepartment;
+        const userDepartmentName = departments.find(d => d.DepartmentID === user.departmentId)?.DepartmentName;
+        if ((actionType === "Borrow" || actionType === "Export" || actionType === "Reject") && !userDepartmentName) {
+            message.error(t("invalidUserDepartment"));
+            return;
+        }
 
         const payload = {
             ActionType: actionType,
-            UserName: user.idNumber, // UserName từ user hiện tại
-            DepartmentID: user.departmentId, // DepartmentID từ user hiện tại
+            UserName: actionType === "Borrow" || actionType === "Export" || actionType === "Reject" ? user.idNumber : (borrowerInfo?.UserName || values.UserName),
+            DepartmentName: actionType === "Borrow" || actionType === "Export" || actionType === "Reject" ? userDepartmentName : (borrowerInfo?.DepartmentName || values.DepartmentName),
             QRCodeDataList: qrList.map(qrData => {
                 const parts = qrData.split("|");
-                const itemCode = parts[0];
-                const qrIndex = parts[parts.length - 1];
+                const uniqueKey = parts[0].trim();
+                const qrIndex = parts[parts.length - 1].trim();
+                const itemCode = uniqueKey.split("-")[0];
                 return {
-                    QRCodeID: `${itemCode}-${qrIndex}`,
+                    QRCodeID: qrData,
                     ItemCode: itemCode,
+                    UniqueKey: uniqueKey,
                     Quantity: 1
                 };
             }),
             Note: values.Note || "",
             ...(actionType === "Borrow" ? {
-                ToUserName: values.UserName, // Người mượn
-                ToDepartmentID: values.DepartmentID, // ID bộ phận mượn
-                ToDepartmentName: selectedDepartment ? selectedDepartment.DepartmentName : null // Tên bộ phận mượn
+                ToUserName: values.UserName,
+                ToDepartmentName: values.DepartmentName
             } : {}),
             ...(actionType === "Return" ? {
+                UserName: borrowerInfo?.UserName || values.UserName,
+                DepartmentName: borrowerInfo?.DepartmentName || values.DepartmentName,
                 ReceiverName: user.idNumber,
-                ReceiverDeptID: user.departmentId
+                ToDepartmentName: userDepartmentName  // Thay ReceiverDeptID bằng ToDepartmentName
             } : {}),
             ...(actionType === "Transfer" ? {
+                UserName: borrowerInfo?.UserName || values.UserName,
+                DepartmentName: borrowerInfo?.DepartmentName || values.DepartmentName,
                 ReceiverName: values.ReceiverName,
                 ToUserName: values.ReceiverName,
-                ToDepartment: values.ToDepartment,
-                ToDepartmentName: toDepartment ? toDepartment.DepartmentName : null
+                ToDepartmentName: values.ToDepartmentName
             } : {}),
             ...(actionType === "Export" ? {
+                OperationCodeID: values.OperationCodeID,
+                ToUserName: values.ToUserName
+            } : {}),
+            ...(actionType === "Reject" ? {
                 OperationCodeID: values.OperationCodeID
             } : {})
         };
 
-        console.log('TransactionFormStep payload:', payload); // Log để kiểm tra
+        console.log('TransactionFormStep payload:', payload);
         onSubmit(payload);
     };
+
+    const renderBorrowerModal = (isReceiver = false) => (
+        <Modal
+            title={isReceiver ? t("searchReceiver") : t("searchBorrower")}
+            open={isReceiver ? receiverModalVisible : modalVisible}
+            onCancel={() => isReceiver ? setReceiverModalVisible(false) : setModalVisible(false)}
+            footer={null}
+            width={600}
+        >
+            <Search
+                placeholder={t("searchByCardIDNameDept")}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{ marginBottom: 16 }}
+            />
+            <Table
+                dataSource={borrowers.filter((b) =>
+                    b.CardID.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    b.Name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    b.Dept.toLowerCase().includes(searchTerm.toLowerCase())
+                )}
+                columns={[
+                    { title: t("cardID"), dataIndex: "CardID", key: "CardID" },
+                    { title: t("name"), dataIndex: "Name", key: "Name" },
+                    { title: t("dept"), dataIndex: "Dept", key: "Dept" },
+                ]}
+                pagination={{ pageSize: 5 }}
+                onRow={(record) => ({
+                    onClick: () => {
+                        if (isReceiver) {
+                            form.setFieldsValue({
+                                ReceiverName: record.CardID,
+                                ToDepartmentName: record.Dept
+                            });
+                            setReceiverModalVisible(false);
+                        } else {
+                            form.setFieldsValue({
+                                UserName: record.CardID,
+                                DepartmentName: record.Dept
+                            });
+                            setModalVisible(false);
+                        }
+                    },
+                })}
+                rowKey="CardID"
+            />
+        </Modal>
+    );
 
     const renderFields = () => {
         switch (actionType) {
@@ -177,30 +268,41 @@ const TransactionFormStep = ({
                     <>
                         <Form.Item
                             label={t("borrower")}
-                            name="UserName"
-                            rules={[
-                                { required: true, message: t("enterExecutorName") },
-                                { max: 100, message: t("maxNameLength") }
-                            ]}
+                            required
                         >
-                            <Input placeholder={t("enterExecutorName")} />
+                            <Input.Group compact style={{ display: "flex" }}>
+                                <Form.Item
+                                    name="UserName"
+                                    noStyle
+                                    rules={[{ required: true, message: t("enterBorrowerName") }]}
+                                >
+                                    <Input
+                                        style={{ flex: 1 }}
+                                        placeholder={t("borrowerName")}
+                                    />
+                                </Form.Item>
+                                <Button
+                                    onClick={() => setModalVisible(true)}
+                                    icon={<ContactsOutlined />}
+                                >
+                                    {t("search")}
+                                </Button>
+                            </Input.Group>
                         </Form.Item>
                         <Form.Item
                             label={t("borrowDepartment")}
-                            name="DepartmentID"
-                            rules={[{ required: true, message: t("selectDepartment") }]}
+                            name="DepartmentName"
+                            rules={[{ required: true, message: t("selectBorrowDepartment") }]}
                         >
-                            <Select placeholder={t("selectDepartment")}>
-                                {departments.map(dept => (
-                                    <Option key={dept.DepartmentID} value={dept.DepartmentID}>
-                                        {dept.DepartmentName}
-                                    </Option>
-                                ))}
-                            </Select>
+                            <Input
+                                placeholder={t("borrowDepartment")}
+                                readOnly
+                            />
                         </Form.Item>
                     </>
                 );
             case "Return":
+                // Thay ReceiverDeptID thành ReceiverDeptName (ToDepartmentName)
                 return (
                     <>
                         <Form.Item
@@ -215,19 +317,13 @@ const TransactionFormStep = ({
                         </Form.Item>
                         <Form.Item
                             label={t("borrowDepartment")}
-                            name="DepartmentID"
+                            name="DepartmentName"
                             rules={[{ required: true, message: t("selectBorrowDepartment") }]}
                         >
-                            <Select
-                                placeholder={t("selectBorrowDepartment")}
+                            <Input
+                                placeholder={t("borrowDepartment")}
                                 disabled={!!borrowerInfo}
-                            >
-                                {departments.map(dept => (
-                                    <Option key={dept.DepartmentID} value={dept.DepartmentID}>
-                                        {dept.DepartmentName}
-                                    </Option>
-                                ))}
-                            </Select>
+                            />
                         </Form.Item>
                         <Form.Item
                             label={t("receiver")}
@@ -242,20 +338,13 @@ const TransactionFormStep = ({
                         </Form.Item>
                         <Form.Item
                             label={t("receiverDepartment")}
-                            name="ReceiverDeptID"
-                            rules={[{ required: true, message: t("selectReceiverDepartment") }]}
-                            initialValue={user.departmentId}
+                            name="ToDepartmentName"
+                        // rules={[{ required: true, message: t("selectReceiverDepartment") }]}
                         >
-                            <Select
-                                defaultValue={user.departmentId}
-                                disabled
-                            >
-                                {departments.map(dept => (
-                                    <Option key={dept.DepartmentID} value={dept.DepartmentID}>
-                                        {dept.DepartmentName}
-                                    </Option>
-                                ))}
-                            </Select>
+                            <Input
+                                readOnly
+                                defaultValue={departments.find(d => d.DepartmentID === user.departmentId)?.DepartmentName}
+                            />
                         </Form.Item>
                         {borrowerError && (
                             <Typography.Text type="danger">{borrowerError}</Typography.Text>
@@ -273,43 +362,52 @@ const TransactionFormStep = ({
                             <Input
                                 placeholder={t("borrowerName")}
                                 disabled={!!borrowerInfo}
+                                readOnly
                             />
                         </Form.Item>
                         <Form.Item
                             label={t("borrowDepartment")}
-                            name="DepartmentID"
+                            name="DepartmentName"
                             rules={[{ required: true, message: t("selectBorrowDepartment") }]}
                         >
-                            <Select
-                                placeholder={t("selectBorrowDepartment")}
+                            <Input
+                                placeholder={t("borrowDepartment")}
                                 disabled={!!borrowerInfo}
-                            >
-                                {departments.map(dept => (
-                                    <Option key={dept.DepartmentID} value={dept.DepartmentID}>
-                                        {dept.DepartmentName}
-                                    </Option>
-                                ))}
-                            </Select>
+                                readOnly
+                            />
                         </Form.Item>
                         <Form.Item
                             label={t("receiver")}
-                            name="ReceiverName"
-                            rules={[{ required: true, message: t("enterReceiverName") }]}
+                            required
                         >
-                            <Input placeholder={t("enterReceiverName")} />
+                            <Input.Group compact style={{ display: "flex" }}>
+                                <Form.Item
+                                    name="ReceiverName"
+                                    noStyle
+                                    rules={[{ required: true, message: t("enterReceiverName") }]}
+                                >
+                                    <Input
+                                        style={{ flex: 1 }}
+                                        placeholder={t("enterReceiverName")}
+                                    />
+                                </Form.Item>
+                                <Button
+                                    onClick={() => setReceiverModalVisible(true)}
+                                    icon={<ContactsOutlined />}
+                                >
+                                    {t("search")}
+                                </Button>
+                            </Input.Group>
                         </Form.Item>
                         <Form.Item
                             label={t("receiverDepartment")}
-                            name="ToDepartment"
+                            name="ToDepartmentName"
                             rules={[{ required: true, message: t("selectReceiverDepartment") }]}
                         >
-                            <Select placeholder={t("selectReceiverDepartment")}>
-                                {departments.map(dept => (
-                                    <Option key={dept.DepartmentID} value={dept.DepartmentID}>
-                                        {dept.DepartmentName}
-                                    </Option>
-                                ))}
-                            </Select>
+                            <Input
+                                placeholder={t("receiverDepartment")}
+                                readOnly
+                            />
                         </Form.Item>
                         {borrowerError && (
                             <Typography.Text type="danger">{borrowerError}</Typography.Text>
@@ -322,7 +420,6 @@ const TransactionFormStep = ({
                         <Form.Item
                             label={t("exporter")}
                             name="UserName"
-                            rules={[{ required: true, message: t("enterExporterName") }]}
                         >
                             <Input
                                 disabled
@@ -332,7 +429,7 @@ const TransactionFormStep = ({
                         <Form.Item
                             label={t("exportDepartment")}
                             name="DepartmentID"
-                            rules={[{ required: true, message: t("selectExportDepartment") }]}
+                        // rules={[{ required: true, message: t("selectExportDepartment") }]}
                         >
                             <Select
                                 disabled
@@ -346,7 +443,57 @@ const TransactionFormStep = ({
                             </Select>
                         </Form.Item>
                         <Form.Item
+                            label={t("toUserName")}
+                            name="ToUserName"
+                            rules={[{ required: true, message: t("receiver") }]}
+                        >
+                            <Input placeholder={t("receiver")} />
+                        </Form.Item>
+                        <Form.Item
                             label={t("exportReason")}
+                            name="OperationCodeID"
+                            rules={[{ required: true, message: t("selectExportReason") }]}
+                        >
+                            <Select placeholder={t("selectExportReason")}>
+                                {operationCodes.map(code => (
+                                    <Option key={code.ReasonID} value={code.ReasonID}>
+                                        {code.ReasonDetail}
+                                    </Option>
+                                ))}
+                            </Select>
+                        </Form.Item>
+                    </>
+                );
+            case "Reject":
+                return (
+                    <>
+                        <Form.Item
+                            label={t("rejecter")}
+                            name="UserName"
+                        >
+                            <Input
+                                disabled
+                                defaultValue={user.idNumber}
+                            />
+                        </Form.Item>
+                        <Form.Item
+                            label={t("rejectDepartment")}
+                            name="DepartmentID"
+                        // rules={[{ required: true, message: t("selectExportDepartment") }]}
+                        >
+                            <Select
+                                disabled
+                                defaultValue={user.departmentId}
+                            >
+                                {departments.map(dept => (
+                                    <Option key={dept.DepartmentID} value={dept.DepartmentID}>
+                                        {dept.DepartmentName}
+                                    </Option>
+                                ))}
+                            </Select>
+                        </Form.Item>
+                        <Form.Item
+                            label={t("rejectReason")}
                             name="OperationCodeID"
                             rules={[{ required: true, message: t("selectExportReason") }]}
                         >
@@ -371,14 +518,19 @@ const TransactionFormStep = ({
             <Form form={form} layout="vertical" onFinish={handleFinish}>
                 {renderFields()}
                 <Form.Item>
-                    <Button onClick={onBack} style={{ marginRight: 8 }}>
+                    <Button onClick={onBack} style={{ marginRight: 8 }} icon={<ArrowLeftOutlined />}>
                         {t("back")}
                     </Button>
-                    <Button type="primary" htmlType="submit" loading={loading} disabled={!!borrowerError}>
+                    <Button type="primary" htmlType="submit" loading={loading} disabled={!!borrowerError} icon={<ArrowRightOutlined />}>
                         {t("confirmTransaction")}
                     </Button>
                 </Form.Item>
+                {borrowerError && (
+                    <Typography.Text type="danger">{borrowerError}</Typography.Text>
+                )}
             </Form>
+            {renderBorrowerModal(false)}
+            {renderBorrowerModal(true)}
         </div>
     );
 };

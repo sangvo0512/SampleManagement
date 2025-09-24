@@ -17,7 +17,7 @@ const OperationCodeManagementPage = () => {
     const fetchOperationCodes = useCallback(
         async () => {
             try {
-                const response = await axios.get(`${API_BASE}/operationCode`);
+                const response = await axios.get(`${API_BASE}/operationCode?ts=${Date.now()}`);
                 setOperationCodes(response.data);
             } catch (error) {
                 console.error("Error fetching operation codes:", error);

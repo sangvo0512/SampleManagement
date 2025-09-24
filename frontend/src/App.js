@@ -15,7 +15,8 @@ import GroupManagementPage from './components/GroupManagementPage';
 import WarehouseManagementPage from './components/WarehouseManagementPage';
 import HistoryManagementPage from './components/HistoryPage';
 import TransactionFlowPage from './components/form/TransactionFlowPage';
-
+import InventoryPage from './components/InventoryPage';
+import BorrowerManagementPage from './components/BorrowerManagementPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { PermissionProvider, PermissionContext, usePermissions } from './context/PermissionContext';
 
@@ -78,6 +79,11 @@ function App() {
                     <SamplesPage />
                   </RequirePermission>
                 } />
+                <Route path="/inventory" element={
+                  <RequirePermission permission="inventory">
+                    <InventoryPage />
+                  </RequirePermission>
+                } />
                 <Route path="/qr-scan" element={
                   <RequirePermission permission="scan">
                     <TransactionFlowPage />
@@ -116,6 +122,11 @@ function App() {
                 <Route path="/warehouse-management" element={
                   <RequirePermission permission="warehouse">
                     <WarehouseManagementPage />
+                  </RequirePermission>
+                } />
+                <Route path="/borrowers" element={
+                  <RequirePermission permission="system_management">
+                    <BorrowerManagementPage />
                   </RequirePermission>
                 } />
                 <Route path="/history-management" element={

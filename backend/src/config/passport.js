@@ -7,7 +7,7 @@ const OPTS = {
         bindDN: process.env.AD_BIND_DN, // Tài khoản bind
         bindCredentials: process.env.AD_BIND_CREDENTIALS, // Mật khẩu bind
         searchBase: process.env.AD_SEARCH_BASE,
-        searchFilter: "(sAMAccountName={{username}})"
+        searchFilter: "(sAMAccountName={{username}})" //filter theo username, key = sAMAccountName
     }
 };
 

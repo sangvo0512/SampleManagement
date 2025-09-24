@@ -8,49 +8,54 @@ class TransactionController {
             const {
                 ActionType,
                 UserName,
-                DepartmentID,
+                DepartmentName,
                 QRCodeDataList = [],
                 OperationCodeID,
                 ToUserName,
                 ToDepartmentName
             } = req.body;
 
-            console.log('createTransaction req.body:', req.body); // Log để kiểm tra dữ liệu nhận được
+            console.log('createTransaction req.body:', req.body);
 
             const actionTypeMap = {
                 'Mượn': 'Borrow',
                 'Trả': 'Return',
                 'Chuyển giao': 'Transfer',
-                'Xuất kho': 'Export'
+                'Xuất kho': 'Export',
+                'Báo phế': 'Reject'
             };
             const normalizedActionType = actionTypeMap[ActionType] || ActionType;
-            if (!['Borrow', 'Return', 'Transfer', 'Export'].includes(normalizedActionType)) {
-                return res.status(400).json({ message: `Loại giao dịch không hợp lệ: ${ActionType}` });
+            if (!['Borrow', 'Return', 'Transfer', 'Export', 'Reject'].includes(normalizedActionType)) {
+                return res.status(400).json({ message: `Invalid transaction type: ${ActionType}` });
             }
 
             if (!Array.isArray(QRCodeDataList) || QRCodeDataList.length === 0) {
-                return res.status(400).json({ message: "Không có QR code để giao dịch." });
+                return res.status(400).json({ message: "QR list are empty." });
             }
-            if (!UserName || !DepartmentID) {
-                return res.status(400).json({ message: "Thiếu thông tin người thực hiện hoặc bộ phận." });
+            if (!UserName || !DepartmentName) {
+                console.error('Thiếu thông tin:', { UserName, DepartmentName });
+                return res.status(400).json({ message: "Missing require information." });
             }
             if (normalizedActionType === 'Borrow' && (!ToUserName || !ToDepartmentName)) {
-                return res.status(400).json({ message: "Thiếu thông tin người mượn hoặc bộ phận mượn." });
+                return res.status(400).json({ message: "Missing require information." });
             }
-            if (normalizedActionType === 'Export' && !OperationCodeID) {
-                return res.status(400).json({ message: "Thiếu lý do xuất kho (OperationCodeID)." });
+            if (normalizedActionType === 'Export' && (!OperationCodeID || !ToUserName)) {
+                return res.status(400).json({ message: "Missing require information." });
             }
             if ((normalizedActionType === 'Return' || normalizedActionType === 'Transfer') && (!ToUserName || !ToDepartmentName)) {
-                return res.status(400).json({ message: "Thiếu thông tin người nhận hoặc bộ phận nhận." });
+                return res.status(400).json({ message: "Missing require information." });
+            }
+            if (normalizedActionType === 'Reject' && !OperationCodeID) {
+                return res.status(400).json({ message: "Missing operation code." });
             }
 
             const pool = await poolPromise;
             for (const qr of QRCodeDataList) {
                 const QRCodeID = qr.QRCodeID;
-                const QRIndex = parseInt(qr.QRCodeID?.split("-").pop());
+                const QRIndex = parseInt(qr.QRCodeID?.split("|").pop());
 
                 if (isNaN(QRIndex)) {
-                    return res.status(400).json({ message: `QRIndex không hợp lệ: ${QRCodeID}` });
+                    return res.status(400).json({ message: `Invalid QRIndex: ${QRCodeID}` });
                 }
 
                 const result = await pool.request()
@@ -58,54 +63,56 @@ class TransactionController {
                     .query(`SELECT Status FROM QRCodeDetails WHERE QRCodeID = @QRCodeID`);
 
                 if (result.recordset.length === 0) {
-                    return res.status(404).json({ message: `Mã QR ${QRCodeID} không tồn tại.` });
+                    return res.status(404).json({ message: `The QR ${QRCodeID} is not exist.` });
                 }
 
                 const status = result.recordset[0].Status;
                 if (normalizedActionType === 'Borrow' && status !== 'Available') {
-                    return res.status(400).json({ message: `Mã QR ${QRCodeID} không khả dụng để mượn (trạng thái: ${status}).` });
+                    return res.status(400).json({ message: `The QR ${QRCodeID} is not ready to Borrow (trạng thái: ${status}).` });
                 }
                 if (normalizedActionType === 'Export' && status !== 'Available') {
-                    return res.status(400).json({ message: `Mã QR ${QRCodeID} không khả dụng để xuất kho (trạng thái: ${status}).` });
+                    return res.status(400).json({ message: `The QR ${QRCodeID} is not ready to Export (trạng thái: ${status}).` });
                 }
                 if (normalizedActionType === 'Transfer' && status !== 'Borrowed') {
-                    return res.status(400).json({ message: `Mã QR ${QRCodeID} phải ở trạng thái 'Borrowed' để chuyển giao (trạng thái: ${status}).` });
+                    return res.status(400).json({ message: `The QR ${QRCodeID} must be in "Borrowed" status to Transfer (Status: ${status}).` });
+                }
+                if (normalizedActionType === 'Reject' && status !== 'Available') {
+                    return res.status(400).json({ message: `The QR ${QRCodeID} is not available for Reject (Status: ${status}).` });
                 }
             }
 
             const items = QRCodeDataList.map(qr => {
-                const QRIndex = parseInt(qr.QRCodeID?.split("-").pop());
+                const QRIndex = parseInt(qr.QRCodeID?.split("|").pop());
                 if (isNaN(QRIndex)) {
-                    throw new Error(`QRIndex không hợp lệ: ${qr.QRCodeID}`);
+                    throw new Error(`Invalid QRIndex: ${qr.QRCodeID}`);
                 }
                 return {
-                    ItemCode: qr.ItemCode,
+                    UniqueKey: qr.UniqueKey,
                     QRIndex,
                     QRCodeID: qr.QRCodeID,
-                    QRCodeData: qr.QRCodeData || null,
                     Quantity: qr.Quantity || 1
                 };
             });
 
             const transactionId = await TransactionModel.createTransaction({
                 ActionType: normalizedActionType,
-                UserName, // UserName từ user hiện tại
-                DepartmentID, // DepartmentID từ user hiện tại
+                UserName,
+                DepartmentName: DepartmentName || null, // Đảm bảo không undefined
                 TransactionDate: new Date(),
                 items,
                 OperationCodeID,
-                ToUserName, // ToUserName từ người mượn
-                ToDepartmentName // ToDepartmentName từ người mượn
+                ToUserName,
+                ToDepartmentName
             });
 
             return res.status(201).json({
-                message: `${normalizedActionType} thành công.`,
+                message: `${normalizedActionType} successfully.`,
                 transactionId
             });
         } catch (error) {
-            console.error("Lỗi tạo giao dịch:", error);
+            console.error("Lỗi tạo giao dịch:", { error: error.message, body: req.body });
             return res.status(500).json({
-                message: "Lỗi máy chủ.",
+                message: "Server err.",
                 error: error.message
             });
         }
@@ -117,7 +124,7 @@ class TransactionController {
 
             if (!qrCodeIds) {
                 console.error('qrCodeIds không được cung cấp');
-                return res.status(400).json({ success: false, message: 'Danh sách QRCodeID không được cung cấp.' });
+                return res.status(400).json({ success: false, message: 'QRCodeID list not provided.' });
             }
 
             if (typeof qrCodeIds === 'string') {
@@ -126,7 +133,7 @@ class TransactionController {
 
             if (!Array.isArray(qrCodeIds)) {
                 console.error('qrCodeIds không phải mảng:', qrCodeIds);
-                return res.status(400).json({ success: false, message: 'Danh sách QRCodeID phải là mảng.' });
+                return res.status(400).json({ success: false, message: 'The QRCodeID list must be an array.' });
             }
 
             qrCodeIds = qrCodeIds.filter(id => id && typeof id === 'string').map(id => id.trim().toUpperCase());
@@ -134,7 +141,7 @@ class TransactionController {
 
             if (qrCodeIds.length === 0) {
                 console.error('Danh sách QRCodeID rỗng sau khi chuẩn hóa');
-                return res.status(400).json({ success: false, message: 'Danh sách QRCodeID rỗng.' });
+                return res.status(400).json({ success: false, message: 'The QRCodeID list are empty.' });
             }
 
             const pool = await poolPromise;
@@ -146,32 +153,43 @@ class TransactionController {
 
             const placeholders = qrCodeIds.map((_, index) => `@QRCodeID${index}`).join(',');
             const query = `
-                SELECT DISTINCT
-                    t.TransactionID,
-                    t.ActionType,
-                    t.UserName,
-                    t.DepartmentID,
-                    d.DepartmentName,
-                    t.ToUserName,
-                    t.ToDepartmentName,
-                    t.TransactionDate,
-                    td.QRCodeID
-                FROM Transactions t
-                JOIN TransactionDetails td ON t.TransactionID = td.TransactionID
-                LEFT JOIN Departments d ON t.DepartmentID = d.DepartmentID
-                WHERE UPPER(TRIM(td.QRCodeID)) IN (${placeholders})
-                AND t.ActionType IN ('Borrow', 'Transfer')
-                AND td.ReturnDate IS NULL
-                AND td.BorrowDate = (
-                    SELECT MAX(td2.BorrowDate)
-                    FROM TransactionDetails td2
-                    JOIN Transactions t2 ON t2.TransactionID = td2.TransactionID
-                    WHERE UPPER(TRIM(td2.QRCodeID)) = UPPER(TRIM(td.QRCodeID))
-                    AND t2.ActionType IN ('Borrow', 'Transfer')
-                    AND td2.ReturnDate IS NULL
-                )
-                ORDER BY t.TransactionDate DESC
-            `;
+                            WITH RankedTransactions AS (
+                                SELECT 
+                                    t.TransactionID,
+                                    t.ActionType,
+                                    t.UserName,
+                                    t.DepartmentName,
+                                    t.ToUserName,
+                                    t.ToDepartmentName,
+                                    t.TransactionDate,
+                                    td.QRCodeID,
+                                    ROW_NUMBER() OVER (
+                                    PARTITION BY td.QRCodeID 
+                                    ORDER BY t.TransactionDate DESC, t.TransactionID DESC
+                                        ) AS rn
+                                    FROM Transactions t
+                                    JOIN TransactionDetails td ON t.TransactionID = td.TransactionID
+                                WHERE UPPER(TRIM(td.QRCodeID)) IN (${placeholders})
+                                AND t.ActionType IN ('Borrow', 'Transfer', 'Export')
+                                AND td.ReturnDate IS NULL
+                                    )
+                                SELECT 
+                                    TransactionID,
+                                    ActionType,
+                                    CASE 
+                                WHEN ActionType IN ('Borrow', 'Transfer') THEN ToUserName 
+                                    ELSE UserName 
+                                    END AS UserName,
+                                CASE 
+                                WHEN ActionType IN ('Borrow', 'Transfer') THEN ToDepartmentName 
+                                    ELSE DepartmentName 
+                                    END AS DepartmentName,
+                                    QRCodeID,
+                                    TransactionDate
+                                FROM RankedTransactions
+                                WHERE rn = 1
+                                    ORDER BY TransactionDate DESC
+                                    `;
 
             const result = await request.query(query);
             console.log('getBorrowTransactionsByQRCodes result:', result.recordset);
@@ -179,8 +197,8 @@ class TransactionController {
             const transactions = result.recordset.map(record => ({
                 TransactionID: record.TransactionID,
                 ActionType: record.ActionType,
-                UserName: record.ActionType === 'Borrow' ? record.ToUserName : record.ToUserName || record.UserName, // Lấy ToUserName cho Borrow
-                DepartmentName: record.ActionType === 'Borrow' ? record.ToDepartmentName : record.ToDepartmentName || record.DepartmentName, // Lấy ToDepartmentName cho Borrow
+                UserName: record.UserName,
+                DepartmentName: record.DepartmentName,
                 QRCodeID: record.QRCodeID,
                 TransactionDate: record.TransactionDate
             }));
@@ -188,79 +206,42 @@ class TransactionController {
             return res.status(200).json({ success: true, data: transactions });
         } catch (error) {
             console.error('Lỗi trong getBorrowTransactionsByQRCodes:', error);
-            return res.status(500).json({ success: false, message: 'Lỗi máy chủ khi lấy thông tin giao dịch.', error: error.message });
+            return res.status(500).json({ success: false, message: 'Server error while retrieving transaction information.', error: error.message });
         }
     }
 
-    // static async handleBorrow(data) {
-    //     try {
-    //         const { ItemCode, Quantity, QRCodeDataList, UserName, DepartmentID } = data;
-    //         if (!QRCodeDataList || !Array.isArray(QRCodeDataList) || QRCodeDataList.length === 0) {
-    //             return { success: false, message: "Danh sách QRCodeID không hợp lệ." };
-    //         }
-
-    //         const pool = await poolPromise;
-    //         for (const qr of QRCodeDataList) {
-    //             const QRCodeID = qr.QRCodeID;
-    //             const QRIndex = parseInt(qr.QRCodeID?.split("-").pop());
-    //             if (isNaN(QRIndex)) {
-    //                 return { success: false, message: `QRIndex không hợp lệ: ${QRCodeID}` };
-    //             }
-
-    //             const result = await pool.request()
-    //                 .input('QRCodeID', sql.NVarChar(150), QRCodeID)
-    //                 .query(`
-    //                     SELECT Status
-    //                     FROM QRCodeDetails
-    //                     WHERE QRCodeID = @QRCodeID
-    //                 `);
-
-    //             if (result.recordset.length === 0) {
-    //                 return { success: false, message: `Mã QR ${QRCodeID} không tồn tại.` };
-    //             }
-
-    //             const status = result.recordset[0].Status;
-    //             if (status !== 'Available') {
-    //                 return { success: false, message: `Mã QR ${QRCodeID} không khả dụng để mượn (trạng thái: ${status}).` };
-    //             }
-    //         }
-
-    //         const transactionId = await TransactionModel.createTransaction({
-    //             ActionType: 'Borrow',
-    //             UserName,
-    //             DepartmentID,
-    //             TransactionDate: new Date(),
-    //             items: QRCodeDataList.map(qr => ({
-    //                 ItemCode,
-    //                 QRIndex: parseInt(qr.QRCodeID.split("-").pop()),
-    //                 QRCodeID: qr.QRCodeID,
-    //                 QRCodeData: qr.QRCodeData || null,
-    //                 Quantity: qr.Quantity || 1
-    //             }))
-    //         });
-
-    //         return { success: true, message: "Mượn sản phẩm thành công.", transactionId };
-    //     } catch (error) {
-    //         console.error("Lỗi xử lý mượn:", error);
-    //         return { success: false, message: error.message || "Lỗi máy chủ khi mượn sản phẩm." };
-    //     }
-    // }
-    static async handleBorrow(data) {
+    static async handleBorrow(req, res) {
         try {
-            const { ItemCode, Quantity, QRCodeDataList, UserName, DepartmentID, ToUserName, ToDepartmentName } = data;
-            if (!QRCodeDataList || !Array.isArray(QRCodeDataList) || QRCodeDataList.length === 0) {
-                return { success: false, message: "Danh sách QRCodeID không hợp lệ." };
+            const {
+                ActionType,
+                UserName,
+                DepartmentName,  // Đảm bảo lấy đúng từ req.body
+                QRCodeDataList = [],
+                ToUserName,
+                ToDepartmentName
+            } = req.body;
+
+            console.log('handleBorrow req.body:', req.body);
+
+            // Kiểm tra dữ liệu đầu vào
+            if (!UserName || !DepartmentName) {
+                return res.status(400).json({ message: "Missing information about the performer or department." });
             }
             if (!ToUserName || !ToDepartmentName) {
-                return { success: false, message: "Thiếu thông tin người mượn hoặc bộ phận mượn." };
+                return res.status(400).json({ message: "Missing borrower or borrowing department information." });
+            }
+            if (!Array.isArray(QRCodeDataList) || QRCodeDataList.length === 0) {
+                return res.status(400).json({ message: "No QR code to borrow." });
             }
 
+            // Kiểm tra trạng thái QR code
             const pool = await poolPromise;
             for (const qr of QRCodeDataList) {
                 const QRCodeID = qr.QRCodeID;
-                const QRIndex = parseInt(qr.QRCodeID?.split("-").pop());
+                const QRIndex = parseInt(qr.QRCodeID?.split("|").pop());
+
                 if (isNaN(QRIndex)) {
-                    return { success: false, message: `QRIndex không hợp lệ: ${QRCodeID}` };
+                    return res.status(400).json({ message: `Invalid QRIndex: ${QRCodeID}` });
                 }
 
                 const result = await pool.request()
@@ -268,231 +249,224 @@ class TransactionController {
                     .query(`SELECT Status FROM QRCodeDetails WHERE QRCodeID = @QRCodeID`);
 
                 if (result.recordset.length === 0) {
-                    return { success: false, message: `Mã QR ${QRCodeID} không tồn tại.` };
+                    return res.status(404).json({ message: `The QR ${QRCodeID} is not exist.` });
                 }
 
-                const status = result.recordset[0].Status;
-                if (status !== 'Available') {
-                    return { success: false, message: `Mã QR ${QRCodeID} không khả dụng để mượn (trạng thái: ${status}).` };
+                if (result.recordset[0].Status !== 'Available') {
+                    return res.status(400).json({ message: `The QR ${QRCodeID} not available for Borrowing (Status: ${result.recordset[0].Status}).` });
                 }
             }
 
-            const transactionId = await TransactionModel.createTransaction({
-                ActionType: 'Borrow',
-                UserName, // UserName từ user hiện tại
-                DepartmentID, // DepartmentID từ user hiện tại
-                TransactionDate: new Date(),
-                items: QRCodeDataList.map(qr => ({
-                    ItemCode,
-                    QRIndex: parseInt(qr.QRCodeID.split("-").pop()),
+            // Chuẩn bị dữ liệu cho createTransaction
+            const items = QRCodeDataList.map(qr => {
+                const QRIndex = parseInt(qr.QRCodeID?.split("|").pop());
+                if (isNaN(QRIndex)) {
+                    throw new Error(`QRIndex không hợp lệ: ${qr.QRCodeID}`);
+                }
+                return {
+                    UniqueKey: qr.UniqueKey,
+                    QRIndex,
                     QRCodeID: qr.QRCodeID,
-                    QRCodeData: qr.QRCodeData || null,
                     Quantity: qr.Quantity || 1
-                })),
-                ToUserName, // Lưu thông tin người mượn
-                ToDepartmentName // Lưu thông tin bộ phận người mượn
+                };
             });
 
-            return { success: true, message: "Mượn sản phẩm thành công.", transactionId };
+            // Gọi createTransaction với dữ liệu đúng
+            const transactionId = await TransactionModel.createTransaction({
+                ActionType: 'Borrow',
+                UserName,
+                DepartmentName,  // Đảm bảo truyền DepartmentName từ req.body
+                TransactionDate: new Date(),
+                items,
+                ToUserName,
+                ToDepartmentName
+            });
+
+            return res.status(201).json({
+                message: "Borrow successfully.",
+                transactionId
+            });
         } catch (error) {
-            console.error("Lỗi xử lý mượn:", error);
-            return { success: false, message: error.message || "Lỗi máy chủ khi mượn sản phẩm." };
+            console.error("Lỗi xử lý giao dịch mượn:", error);
+            return res.status(500).json({
+                message: "Server err.",
+                error: error.message
+            });
         }
     }
+
     static async handleReturn(data) {
         let transaction;
         try {
             console.time('handleReturn');
-            const { QRCodeDataList, UserName, DepartmentID, ReceiverName, ReceiverDeptID } = data;
-            console.log('handleReturn input:', { QRCodeDataList, UserName, DepartmentID, ReceiverName, ReceiverDeptID });
+            const { QRCodeDataList, UserName, DepartmentName, ReceiverName, ReceiverDeptID, ToDepartmentName } = data;
+            console.log('handleReturn input:', { QRCodeDataList, UserName, DepartmentName, ReceiverName, ReceiverDeptID, ToDepartmentName });
 
             if (!QRCodeDataList || !Array.isArray(QRCodeDataList) || QRCodeDataList.length === 0) {
-                console.error('Danh sách QRCodeID không hợp lệ:', QRCodeDataList);
                 return { success: false, message: "Danh sách QRCodeID không hợp lệ.", status: 400 };
             }
 
-            if (!ReceiverName || !ReceiverDeptID) {
-                console.error('Thiếu thông tin người nhận hoặc bộ phận nhận:', { ReceiverName, ReceiverDeptID });
+            if (!ReceiverName || !ReceiverDeptID || !ToDepartmentName) {
                 return { success: false, message: "Thiếu thông tin người nhận hoặc bộ phận nhận.", status: 400 };
             }
 
-            console.log('Bắt đầu transaction trong handleReturn');
             const pool = await poolPromise;
             transaction = await pool.transaction();
             await transaction.begin();
 
-            const success = [];
             const errors = [];
             const transactionIds = new Set();
+            const uniqueKeys = {};
 
-            // Batch kiểm tra trạng thái QRCodeDetails
-            const qrCodeIds = QRCodeDataList.map(qr => qr.QRCodeID.trim().toUpperCase());
-            console.log('qrCodeIds for query:', qrCodeIds);
+            // --- Lấy trạng thái QR ---
+            const qrCodeIds = QRCodeDataList.map(qr => qr.QRCodeID.trim());
             let request = transaction.request();
             qrCodeIds.forEach((id, i) => request.input(`QRCodeID${i}`, sql.NVarChar(150), id));
-            console.time('qrStatusQuery');
             const qrStatusResult = await request.query(`
-                SELECT QRCodeID, Status
-                FROM QRCodeDetails
-                WHERE QRCodeID IN (${qrCodeIds.map((_, i) => `@QRCodeID${i}`).join(',')})
-            `);
-            console.timeEnd('qrStatusQuery');
-            const qrStatuses = qrStatusResult.recordset.reduce((acc, record) => {
-                acc[record.QRCodeID] = record.Status;
+            SELECT QRCodeID, Status
+            FROM QRCodeDetails
+            WHERE QRCodeID IN (${qrCodeIds.map((_, i) => `@QRCodeID${i}`).join(',')})
+        `);
+            const qrStatuses = qrStatusResult.recordset.reduce((acc, r) => {
+                acc[r.QRCodeID] = r.Status;
                 return acc;
             }, {});
-            console.log('qrStatuses:', qrStatuses);
 
-            // Batch kiểm tra giao dịch mượn
+            // --- Lấy giao dịch mượn gần nhất ---
             request = transaction.request();
             qrCodeIds.forEach((id, i) => request.input(`QRCodeID${i}`, sql.NVarChar(150), id));
-            console.time('borrowQuery');
             const borrowResult = await request.query(`
-                WITH RankedTransactions AS (
-                    SELECT 
-                        t.TransactionID,
-                        td.DetailID,
-                        td.QRCodeID,
-                        td.Quantity,
-                        td.ReturnDate,
-                        td.ItemCode,
-                        ROW_NUMBER() OVER (PARTITION BY td.QRCodeID ORDER BY td.BorrowDate DESC, t.TransactionID DESC) AS rn
-                    FROM Transactions t
-                    JOIN TransactionDetails td ON t.TransactionID = td.TransactionID
-                    WHERE t.ActionType IN ('Borrow', 'Transfer')
-                    AND td.QRCodeID IN (${qrCodeIds.map((_, i) => `@QRCodeID${i}`).join(',')})
-                    AND td.ReturnDate IS NULL
-                )
-                SELECT TransactionID, DetailID, QRCodeID, Quantity, ReturnDate, ItemCode
-                FROM RankedTransactions
-                WHERE rn = 1
-            `);
-            console.timeEnd('borrowQuery');
-            const borrowDetails = borrowResult.recordset.reduce((acc, record) => {
-                acc[record.QRCodeID] = record;
+            WITH RankedTransactions AS (
+                SELECT 
+                    t.TransactionID,
+                    td.DetailID,
+                    td.QRCodeID,
+                    td.Quantity,
+                    td.ReturnDate,
+                    td.UniqueKey,
+                    ROW_NUMBER() OVER (PARTITION BY td.QRCodeID ORDER BY td.BorrowDate DESC, t.TransactionID DESC) AS rn
+                FROM Transactions t
+                JOIN TransactionDetails td ON t.TransactionID = td.TransactionID
+                WHERE t.ActionType IN ('Borrow', 'Transfer', 'Export')
+                AND td.QRCodeID IN (${qrCodeIds.map((_, i) => `@QRCodeID${i}`).join(',')})
+                AND td.ReturnDate IS NULL
+            )
+            SELECT TransactionID, DetailID, QRCodeID, Quantity, ReturnDate, UniqueKey
+            FROM RankedTransactions
+            WHERE rn = 1
+        `);
+            const borrowDetails = borrowResult.recordset.reduce((acc, r) => {
+                acc[r.QRCodeID] = r;
                 return acc;
             }, {});
-            console.log('borrowDetails:', borrowDetails);
 
-            // Kiểm tra tính hợp lệ
+            // --- Kiểm tra dữ liệu ---
             for (const qr of QRCodeDataList) {
-                const QRCodeID = qr.QRCodeID.trim().toUpperCase();
-                const QRIndex = parseInt(QRCodeID.split('-').pop());
+                const QRCodeID = qr.QRCodeID.trim();
+                const QRIndex = parseInt(QRCodeID.split('|').pop());
+                const UniqueKey = qr.UniqueKey;
+
                 if (isNaN(QRIndex)) {
                     errors.push({ QRCodeID, error: `QRIndex không hợp lệ: ${QRCodeID}` });
                     continue;
                 }
-                if (!qrStatuses[QRCodeID] || qrStatuses[QRCodeID] !== 'Borrowed') {
-                    errors.push({ QRCodeID, error: `Mã QR ${QRCodeID} không ở trạng thái Borrowed.` });
+                if (!qrStatuses[QRCodeID] || !['Borrowed', 'Exported'].includes(qrStatuses[QRCodeID])) {
+                    errors.push({ QRCodeID, error: `Mã QR ${QRCodeID} không ở trạng thái Borrowed hoặc Exported.` });
                     continue;
                 }
                 if (!borrowDetails[QRCodeID]) {
-                    errors.push({ QRCodeID, error: `Không tìm thấy giao dịch Borrow hoặc Transfer cho mã QR ${QRCodeID}.` });
+                    errors.push({ QRCodeID, error: `Không tìm thấy giao dịch Borrow/Transfer/Export cho mã QR ${QRCodeID}.` });
                     continue;
                 }
+
                 transactionIds.add(borrowDetails[QRCodeID].TransactionID);
+                uniqueKeys[UniqueKey] = uniqueKeys[UniqueKey] || { totalQuantity: 0 };
+                uniqueKeys[UniqueKey].totalQuantity += qr.Quantity || 1;
             }
 
             if (transactionIds.size > 1) {
                 await transaction.rollback();
-                console.timeEnd('handleReturn');
-                return { success: false, message: "Các mã QR thuộc nhiều giao dịch khác nhau. Vui lòng chọn lại.", status: 400 };
+                return { success: false, message: "Các mã QR thuộc nhiều giao dịch khác nhau.", status: 400 };
             }
             if (errors.length > 0) {
                 await transaction.rollback();
-                console.timeEnd('handleReturn');
                 return { success: false, message: "Có lỗi khi xử lý trả.", errors, status: 400 };
             }
 
             const transactionId = [...transactionIds][0];
 
-            // Batch cập nhật ReturnDate và QRCodeDetails
+            // --- Cập nhật TransactionDetails ---
             const detailIds = Object.values(borrowDetails).map(d => d.DetailID);
             request = transaction.request();
-            console.time('updateTransactionDetails');
             await request.query(`
-                UPDATE TransactionDetails
-                SET ReturnDate = GETDATE()
-                WHERE DetailID IN (${detailIds.join(',')})
-            `);
-            console.timeEnd('updateTransactionDetails');
+            UPDATE TransactionDetails
+            SET ReturnDate = GETDATE()
+            WHERE DetailID IN (${detailIds.join(',')})
+        `);
+
+            // --- Cập nhật trạng thái QR ---
             request = transaction.request();
             qrCodeIds.forEach((id, i) => request.input(`QRCodeID${i}`, sql.NVarChar(150), id));
-            console.time('updateQRCodeDetails');
             await request.query(`
-                UPDATE QRCodeDetails
-                SET Status = 'Available'
-                WHERE QRCodeID IN (${qrCodeIds.map((_, i) => `@QRCodeID${i}`).join(',')})
-            `);
-            console.timeEnd('updateQRCodeDetails');
+            UPDATE QRCodeDetails
+            SET Status = 'Available'
+            WHERE QRCodeID IN (${qrCodeIds.map((_, i) => `@QRCodeID${i}`).join(',')})
+        `);
 
-            // Lấy DepartmentName và ToDepartmentName
-            request = transaction.request();
-            request.input('DepartmentID', sql.Int, DepartmentID);
-            request.input('ReceiverDeptID', sql.Int, ReceiverDeptID);
-            console.time('deptQuery');
-            const deptResult = await request.query(`
-                SELECT DepartmentID, DepartmentName
-                FROM Departments
-                WHERE DepartmentID IN (@DepartmentID, @ReceiverDeptID)
-            `);
-            console.timeEnd('deptQuery');
-            const deptMap = deptResult.recordset.reduce((acc, d) => {
-                acc[d.DepartmentID] = d.DepartmentName;
-                return acc;
-            }, {});
-            console.log('deptMap:', deptMap);
-
-            // Batch ghi log và cập nhật Samples
-            console.time('logAndSampleUpdate');
-            const itemCodes = {};
-            for (const qr of QRCodeDataList) {
-                const QRCodeID = qr.QRCodeID.trim().toUpperCase();
-                const detail = borrowDetails[QRCodeID];
-                await TransactionModel.logProductAction({
-                    ItemCode: detail.ItemCode,
-                    ActionType: 'Return',
-                    Quantity: detail.Quantity,
-                    TransactionID: transactionId,
-                    UserName,
-                    DepartmentID,
-                    QRCodeID,
-                    DetailID: detail.DetailID,
-                    ToUserName: ReceiverName,
-                    ToDepartmentName: deptMap[ReceiverDeptID]
-                }, transaction);
-
-                if (!itemCodes[detail.ItemCode]) {
-                    itemCodes[detail.ItemCode] = { totalQuantity: 0, detailIds: [] };
-                }
-                itemCodes[detail.ItemCode].totalQuantity += detail.Quantity;
-                itemCodes[detail.ItemCode].detailIds.push(detail.DetailID);
-            }
-
-            for (const itemCode in itemCodes) {
-                const { totalQuantity } = itemCodes[itemCode];
-                const sample = await SampleModel.getSampleByItemCode(itemCode, transaction);
+            // --- Cập nhật Sample + Log ---
+            for (const uniqueKey in uniqueKeys) {
+                const { totalQuantity } = uniqueKeys[uniqueKey];
+                const sample = await SampleModel.getSampleByUniqueKey(uniqueKey, transaction);
                 if (sample) {
-                    // Kiểm tra BorrowdQuantity
-                    const currentBorrowedQuantity = sample.BorrowdQuantity ?? 0;
+                    const currentBorrowed = sample.BorrowdQuantity ?? 0;
+                    const currentExported = sample.Exported ?? 0;
                     const updatedQuantity = (sample.Quantity || 0) + totalQuantity;
-                    const updatedBorrowedQuantity = Math.max(0, currentBorrowedQuantity - totalQuantity);
-                    const updatedState = updatedQuantity > 0 ? 'Available' : 'Unavailable';
-                    await SampleModel.updateSampleByItemCode(itemCode, {
+
+                    let updatedBorrowed = currentBorrowed;
+                    let updatedExported = currentExported;
+
+                    if (QRCodeDataList.some(qr => qrStatuses[qr.QRCodeID] === 'Borrowed')) {
+                        updatedBorrowed = Math.max(0, currentBorrowed - totalQuantity);
+                    }
+                    if (QRCodeDataList.some(qr => qrStatuses[qr.QRCodeID] === 'Exported')) {
+                        updatedExported = Math.max(0, currentExported - totalQuantity);
+                    }
+
+                    await SampleModel.updateSampleByUniqueKey(uniqueKey, {
                         Quantity: updatedQuantity,
-                        BorrowdQuantity: updatedBorrowedQuantity,
-                        State: updatedState
+                        BorrowdQuantity: updatedBorrowed,
+                        Exported: updatedExported,
+                        Rejected: sample.Rejected ?? 0,
+                        State: updatedQuantity > 0 ? 'Available' : 'Unavailable'
                     }, transaction);
+
+                    for (const qr of QRCodeDataList) {
+                        if (qr.UniqueKey === uniqueKey) {
+                            await TransactionModel.logProductAction({
+                                UniqueKey: uniqueKey,
+                                ActionType: 'Return',
+                                Quantity: qr.Quantity || 1,
+                                TransactionID: transactionId,
+                                UserName,
+                                DepartmentName,       // phòng ban gốc
+                                QRCodeID: qr.QRCodeID,
+                                OperationCodeID: null,
+                                DetailID: borrowDetails[qr.QRCodeID].DetailID,
+                                ToUserName: ReceiverName,
+                                ToDepartmentName      // lấy trực tiếp từ payload
+                            }, transaction);
+                        }
+                    }
                 }
             }
-            console.timeEnd('logAndSampleUpdate');
 
-            console.log('Chuẩn bị commit transaction, success:', success, 'errors:', errors);
             await transaction.commit();
-            console.log('Transaction committed trong handleReturn');
             console.timeEnd('handleReturn');
-
-            return { success: true, message: "Trả thành công.", data: QRCodeDataList.map(qr => ({ QRCodeID: qr.QRCodeID, message: "Trả thành công." })) };
+            return {
+                success: true,
+                message: "Returned successfully.",
+                data: QRCodeDataList.map(qr => ({ QRCodeID: qr.QRCodeID, message: "Returned." }))
+            };
         } catch (error) {
             console.error('Lỗi trong handleReturn:', error);
             if (transaction) await transaction.rollback();
@@ -501,9 +475,10 @@ class TransactionController {
         }
     }
 
+
     static async handleExport(data) {
         try {
-            const { ItemCode, Quantity, QRCodeDataList, UserName, DepartmentID, OperationCodeID } = data;
+            const { UniqueKey, Quantity, QRCodeDataList, UserName, DepartmentName, OperationCodeID } = data;
             if (!QRCodeDataList || !Array.isArray(QRCodeDataList) || QRCodeDataList.length === 0) {
                 return { success: false, message: "Danh sách QRCodeID không hợp lệ." };
             }
@@ -514,7 +489,7 @@ class TransactionController {
             const pool = await poolPromise;
             for (const qr of QRCodeDataList) {
                 const QRCodeID = qr.QRCodeID;
-                const QRIndex = parseInt(qr.QRCodeID?.split("-").pop());
+                const QRIndex = parseInt(qr.QRCodeID?.split("|").pop());
                 if (isNaN(QRIndex)) {
                     return { success: false, message: `QRIndex không hợp lệ: ${QRCodeID}` };
                 }
@@ -540,36 +515,89 @@ class TransactionController {
             const transactionId = await TransactionModel.createTransaction({
                 ActionType: 'Export',
                 UserName,
-                DepartmentID,
+                DepartmentName,
                 TransactionDate: new Date(),
                 items: QRCodeDataList.map(qr => ({
-                    ItemCode,
-                    QRIndex: parseInt(qr.QRCodeID.split("-").pop()),
+                    UniqueKey,
+                    QRIndex: parseInt(qr.QRCodeID.split("|").pop()),
                     QRCodeID: qr.QRCodeID,
-                    QRCodeData: qr.QRCodeData || null,
                     Quantity: qr.Quantity || 1
                 })),
-                OperationCodeID
+                OperationCodeID,
+                ToUserName
             });
 
-            return { success: true, message: "Xuất kho thành công.", transactionId };
+            return { success: true, message: "Exported successfully.", transactionId };
         } catch (error) {
             console.error("Lỗi xử lý xuất kho:", error);
             return { success: false, message: error.message || "Lỗi máy chủ khi xuất kho." };
         }
     }
 
+    static async handleReject(data) {
+        try {
+            const { UniqueKey, Quantity, QRCodeDataList, UserName, DepartmentName, OperationCodeID } = data;
+            if (!QRCodeDataList || !Array.isArray(QRCodeDataList) || QRCodeDataList.length === 0) {
+                return { success: false, message: "Danh sách QRCodeID không hợp lệ." };
+            }
+            if (!OperationCodeID) {
+                return { success: false, message: "Thiếu lý do báo hủy (OperationCodeID)." };
+            }
+
+            const pool = await poolPromise;
+            for (const qr of QRCodeDataList) {
+                const QRCodeID = qr.QRCodeID;
+                const QRIndex = parseInt(qr.QRCodeID?.split("|").pop());
+                if (isNaN(QRIndex)) {
+                    return { success: false, message: `QRIndex không hợp lệ: ${QRCodeID}` };
+                }
+
+                const result = await pool.request()
+                    .input('QRCodeID', sql.NVarChar(150), QRCodeID)
+                    .query(`SELECT Status FROM QRCodeDetails WHERE QRCodeID = @QRCodeID`);
+
+                if (result.recordset.length === 0) {
+                    return { success: false, message: `Mã QR ${QRCodeID} không tồn tại.` };
+                }
+
+                const status = result.recordset[0].Status;
+                if (status !== 'Available') {
+                    return { success: false, message: `Mã QR ${QRCodeID} không khả dụng để báo hủy (trạng thái: ${status}).` };
+                }
+            }
+
+            const transactionId = await TransactionModel.createTransaction({
+                ActionType: 'Reject',
+                UserName,
+                DepartmentName,
+                TransactionDate: new Date(),
+                items: QRCodeDataList.map(qr => ({
+                    UniqueKey,
+                    QRIndex: parseInt(qr.QRCodeID.split("|").pop()),
+                    QRCodeID: qr.QRCodeID,
+                    Quantity: qr.Quantity || 1
+                })),
+                OperationCodeID
+            });
+
+            return { success: true, message: "Rejected successfully.", transactionId };
+        } catch (error) {
+            console.error("Lỗi xử lý báo hủy:", error);
+            return { success: false, message: error.message || "Lỗi máy chủ khi báo hủy." };
+        }
+    }
+
     static async handleTransfer(data) {
         try {
-            const { ItemCode, Quantity, QRCodeDataList, UserName, DepartmentID, ReceiverName, ToDepartment } = data;
+            const { UniqueKey, Quantity, QRCodeDataList, UserName, DepartmentName, ReceiverName, ToDepartment } = data;
             if (!QRCodeDataList || !Array.isArray(QRCodeDataList) || QRCodeDataList.length === 0) {
-                return { success: false, message: "Danh sách mã QR code không hợp lệ." };
+                return { success: false, message: "List of invalid QR codes." };
             }
             if (!ToDepartment) {
-                return { success: false, message: "Thiếu bộ phận nhận (ToDepartment)." };
+                return { success: false, message: "Missing receiving department." };
             }
             if (!ReceiverName) {
-                return { success: false, message: "Thiếu tên người nhận (ReceiverName)." };
+                return { success: false, message: "Missing receiver (ToDepartment)." };
             }
 
             const pool = await poolPromise;
@@ -581,7 +609,7 @@ class TransactionController {
                 const qrCodeIds = QRCodeDataList.map(qr => qr.QRCodeID);
                 for (const qr of QRCodeDataList) {
                     const QRCodeID = qr.QRCodeID;
-                    const QRIndex = parseInt(qr.QRCodeID?.split("-").pop());
+                    const QRIndex = parseInt(qr.QRCodeID?.split("|").pop());
                     if (isNaN(QRIndex)) {
                         await transaction.rollback();
                         return { success: false, message: `QRIndex không hợp lệ: ${QRCodeID}` };
@@ -589,11 +617,7 @@ class TransactionController {
 
                     const result = await pool.request()
                         .input('QRCodeID', sql.NVarChar(150), QRCodeID)
-                        .query(`
-                            SELECT Status
-                            FROM QRCodeDetails
-                            WHERE QRCodeID = @QRCodeID
-                        `);
+                        .query(`SELECT Status FROM QRCodeDetails WHERE QRCodeID = @QRCodeID`);
 
                     if (result.recordset.length === 0) {
                         await transaction.rollback();
@@ -612,7 +636,7 @@ class TransactionController {
                 const query = `
                     SELECT TOP 1 WITH TIES
                         t.UserName AS BorrowerID,
-                        t.DepartmentID,
+                        t.DepartmentName,
                         t.ToUserName,
                         t.ToDepartmentName,
                         t.TransactionDate
@@ -630,7 +654,7 @@ class TransactionController {
                 const borrowResult = await request.query(query);
                 if (borrowResult.recordset.length === 0) {
                     await transaction.rollback();
-                    return { success: false, message: "Không tìm thấy giao dịch mượn hoặc chuyển giao cho các mã QR." };
+                    return { success: false, message: "Cannot find the transaction related to QR." };
                 }
 
                 const uniqueBorrowers = new Set(borrowResult.recordset.map(item => item.ToUserName || item.BorrowerID));
@@ -639,22 +663,19 @@ class TransactionController {
                     return { success: false, message: "Các mã QR thuộc về nhiều người mượn khác nhau. Vui lòng chọn lại." };
                 }
 
-                const effectiveUserName = borrowResult.recordset[0].ToUserName || borrowResult.recordset[0].BorrowerID;
-                const effectiveDepartmentID = borrowResult.recordset[0].DepartmentID;
-
                 const deptResult = await transaction.request()
-                    .input('DepartmentID', sql.Int, ToDepartment)
-                    .query(`SELECT DepartmentName FROM Departments WHERE DepartmentID = @DepartmentID`);
+                    .input('DepartmentName', sql.Int, ToDepartment)
+                    .query(`SELECT DepartmentName FROM Departments WHERE DepartmentName = @DepartmentName`);
                 const toDepartmentName = deptResult.recordset[0]?.DepartmentName || null;
 
                 const transactionId = await TransactionModel.createTransaction({
                     ActionType: 'Transfer',
-                    UserName: effectiveUserName,
-                    DepartmentID: effectiveDepartmentID,
+                    UserName,
+                    DepartmentName,
                     TransactionDate: new Date(),
                     items: QRCodeDataList.map(qr => ({
-                        ItemCode,
-                        QRIndex: parseInt(qr.QRCodeID.split("-").pop()),
+                        UniqueKey,
+                        QRIndex: parseInt(qr.QRCodeID.split("|").pop()),
                         QRCodeID: qr.QRCodeID,
                         Quantity: qr.Quantity || 1
                     })),
@@ -663,7 +684,7 @@ class TransactionController {
                 }, transaction);
 
                 await transaction.commit();
-                return { success: true, message: "Chuyển giao thành công.", transactionId };
+                return { success: true, message: "Successfully.", transactionId };
             } catch (error) {
                 await transaction.rollback();
                 console.error("Lỗi trong handleTransfer:", error);
@@ -671,7 +692,7 @@ class TransactionController {
             }
         } catch (error) {
             console.error("Lỗi xử lý chuyển giao:", error);
-            return { success: false, message: error.message || "Lỗi máy chủ khi chuyển giao." };
+            return { success: false, message: error.message || "Fail when Transfer." };
         }
     }
 
@@ -681,18 +702,18 @@ class TransactionController {
             return res.status(200).json(transactions);
         } catch (error) {
             console.error("Lỗi lấy danh sách giao dịch:", error);
-            return res.status(500).json({ message: "Lỗi máy chủ.", error });
+            return res.status(500).json({ message: "Failed.", error });
         }
     }
 
-    static async getTransactionsByItemCode(req, res) {
+    static async getTransactionsByUniqueKey(req, res) {
         try {
-            const { itemCode } = req.params;
-            const transactions = await TransactionModel.getTransactionsByItemCode(itemCode);
+            const { uniqueKey } = req.params;
+            const transactions = await TransactionModel.getTransactionsByUniqueKey(uniqueKey);
             return res.status(200).json(transactions);
         } catch (error) {
-            console.error("Lỗi lấy giao dịch theo ItemCode:", error);
-            return res.status(500).json({ message: "Lỗi máy chủ.", error });
+            console.error("Fail to get Transaction according to UniqueKey:", error);
+            return res.status(500).json({ message: "Failed.", error });
         }
     }
 
@@ -707,20 +728,19 @@ class TransactionController {
             }
         } catch (error) {
             console.error("Lỗi xóa giao dịch:", error);
-            return res.status(500).json({ message: "Lỗi máy chủ.", error });
+            return res.status(500).json({ message: "Failed.", error });
         }
     }
 
-    // TransactionController.js
     static async getProductLogs(req, res) {
         try {
-            const { itemCode, qrCode, startDate, endDate, actionType } = req.query;
+            const { uniqueKey, qrCode, startDate, endDate, actionType } = req.query;
             const pool = await poolPromise;
             const request = pool.request();
 
             let query = `
                 SELECT 
-                    pl.ItemCode,
+                    pl.UniqueKey,
                     pl.ActionType,
                     pl.Quantity,
                     pl.Date,
@@ -735,23 +755,21 @@ class TransactionController {
             `;
 
             let conditions = [];
-            if (itemCode) {
-                conditions.push(`pl.ItemCode LIKE @ItemCode`);
-                request.input('ItemCode', sql.NVarChar, `%${itemCode}%`);
+            if (uniqueKey) {
+                conditions.push(`pl.UniqueKey LIKE @UniqueKey`);
+                request.input('UniqueKey', sql.NVarChar, `%${uniqueKey}%`);
             }
             if (qrCode) {
                 conditions.push(`pl.QRCodeID LIKE @QRCodeID`);
                 request.input('QRCodeID', sql.NVarChar, `%${qrCode}%`);
             }
             if (startDate && endDate) {
-                // Kiểm tra tính hợp lệ của startDate và endDate
                 const parsedStartDate = new Date(startDate);
                 const parsedEndDate = new Date(endDate);
                 if (isNaN(parsedStartDate.getTime()) || isNaN(parsedEndDate.getTime())) {
                     console.warn('Invalid date parameters:', { startDate, endDate });
                     return res.status(400).json({ message: 'Ngày tháng không hợp lệ.' });
                 }
-                // Đặt endDate đến cuối ngày
                 parsedEndDate.setHours(23, 59, 59, 999);
                 console.log('Parsed Dates:', { parsedStartDate, parsedEndDate });
                 conditions.push(`pl.Date BETWEEN @StartDate AND @EndDate`);
@@ -772,8 +790,29 @@ class TransactionController {
             const result = await request.query(query);
             return res.status(200).json(result.recordset);
         } catch (error) {
-            console.error('Lỗi lấy lịch sử giao dịch:', error);
-            return res.status(500).json({ message: 'Lỗi máy chủ.', error: error.message });
+            console.error('Failed to get Product logs:', error);
+            return res.status(500).json({ message: 'Failed.', error: error.message });
+        }
+    }
+
+    static async getQRCodeStatus(req, res) {
+        try {
+            const { qrCodeId } = req.query;
+
+            if (!qrCodeId) {
+                return res.status(400).json({ success: false, message: 'QRCodeID does not exist.' });
+            }
+
+            const data = await TransactionModel.getQRCodeStatus(qrCodeId.trim().toUpperCase());
+
+            if (!data) {
+                return res.status(404).json({ success: false, message: `The QR ${qrCodeId} is not exist.` });
+            }
+
+            return res.status(200).json({ success: true, data });
+        } catch (error) {
+            console.error('Error on getQRCodeStatus:', error);
+            return res.status(500).json({ success: false, message: 'Fail to get status of QRCode.', error: error.message });
         }
     }
 }

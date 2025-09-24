@@ -1,0 +1,107 @@
+/* WarehousePage.css */
+.warehouse-page {
+    background-color: #fffcf7;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    padding: 2rem;
+    min-height: 100vh;
+}
+
+.warehouse-page .ant-btn-primary {
+    background-color: #64cacf;
+    border-color: #64cacf;
+    border-radius: 10px;
+}
+
+.warehouse-page .ant-btn-primary:hover {
+    background-color: #56b3c0;
+    border-color: #56b3c0;
+}
+
+.warehouse-page .ant-btn {
+    border-radius: 8px;
+}
+
+.warehouse-page .ant-modal-content {
+    border-radius: 12px;
+}
+
+.warehouse-page .ant-table {
+    background-color: #ffffff;
+    border-radius: 12px;
+    padding: 12px;
+    overflow-x: auto;
+}
+
+.warehouse-page .ant-form-item {
+    margin-bottom: 16px;
+}
+
+.warehouse-page .ant-select-selector,
+.warehouse-page .ant-input {
+    border-radius: 8px !important;
+}
+
+/* Container cho hàng filter và action */
+.filter-row {
+    margin-bottom: 16px;
+}
+
+.filter-row .ant-col {
+    display: flex;
+    align-items: center;
+}
+
+.filter-row .ant-select,
+.filter-row .ant-btn {
+    width: 100%;
+}
+
+/* Tiêu đề trang */
+.warehouse-page h3 {
+    font-size: 1.8rem;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 1.5rem;
+    text-align: center;
+}
+
+/* Bảng dữ liệu */
+.warehouse-page .ant-table-thead>tr>th {
+    background-color: #e9ecef;
+    color: #333;
+    font-weight: 600;
+}
+
+/* Responsive cho các thiết bị nhỏ hơn */
+@media (max-width: 768px) {
+    .warehouse-page {
+        padding: 1rem;
+    }
+
+    .warehouse-page h3 {
+        font-size: 1.4rem;
+    }
+
+    .warehouse-page .ant-row {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .warehouse-page .ant-col {
+        width: 100% !important;
+    }
+
+    .warehouse-page .ant-table {
+        overflow-x: auto;
+    }
+
+    .warehouse-page .ant-modal {
+        width: 95% !important;
+        max-width: 100% !important;
+    }
+
+    .warehouse-page .ant-btn {
+        width: 100%;
+    }
+}

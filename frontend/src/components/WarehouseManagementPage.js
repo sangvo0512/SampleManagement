@@ -17,7 +17,7 @@ const WarehouseManagementPage = () => {
     const fetchWarehouses = useCallback(async () => {
         setLoading(true);
         try {
-            const res = await axios.get(`${API_BASE}/warehouses`);
+            const res = await axios.get(`${API_BASE}/warehouses?ts=${Date.now()}`);
             setWarehouses(res.data);
         } catch (err) {
             console.error(err);

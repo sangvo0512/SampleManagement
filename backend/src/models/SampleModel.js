@@ -16,15 +16,21 @@ class SampleModel {
             itemCode,
             workingNO,
             articleNO,
+            colorwayName,
             round,
             notifyProductionQuantity,
             dateInform,
-            quantity,
-            inventoryLocation,
-            warehouseID,
-            state = 'Available',
-            BorrowdQuantity = 0
+            quantity = 0, // Quantity mặc định là 0
+            state = 'Unavailable',
+            borrowdQuantity = 0,
+            exported = 0,
+            rejected = 0,
+            createDate = new Date(),
+            modifyTime = new Date(),
         } = sampleData;
+
+        // Tạo UniqueKey
+        const uniqueKey = `${itemCode}-${season}-${articleNO}-${round}`;
 
         const pool = await poolPromise;
         const result = await pool.request()
@@ -34,63 +40,70 @@ class SampleModel {
             .input("itemCode", sql.NVarChar, itemCode)
             .input("workingNO", sql.NVarChar, workingNO)
             .input("articleNO", sql.NVarChar, articleNO)
+            .input("colorwayName", sql.NVarChar, colorwayName)
             .input("round", sql.NVarChar, round)
             .input("notifyProductionQuantity", sql.Int, notifyProductionQuantity)
             .input("dateInform", sql.Date, dateInform)
             .input("quantity", sql.Int, quantity)
-            .input("inventoryLocation", sql.NVarChar, inventoryLocation)
-            .input("warehouseID", sql.Int, warehouseID)
             .input("state", sql.NVarChar, state)
-            .input("borrowdQuantity", sql.Int, BorrowdQuantity)
+            .input("borrowdQuantity", sql.Int, borrowdQuantity)
+            .input("exported", sql.Int, exported)
+            .input("rejected", sql.Int, rejected)
+            .input("createDate", sql.DateTime, createDate)
+            .input("modifyTime", sql.DateTime, modifyTime)
+            .input("uniqueKey", sql.NVarChar, uniqueKey)
             .query(
                 `INSERT INTO Samples 
-                 (Brand, BU, Season, ItemCode, WorkingNO, ArticleNO, Round, 
-                  NotifyProductionQuantity, DateInform, Quantity, InventoryLocation, WarehouseID, State, BorrowdQuantity)
+                 (Brand, BU, Season, ItemCode, WorkingNO, ArticleNO, ColorwayName, Round, 
+                  NotifyProductionQuantity, DateInform, Quantity, State, BorrowdQuantity, 
+                  Exported, Rejected, CreateDate, ModifyTime, UniqueKey)
                  VALUES 
-                 (@brand, @BU, @season, @itemCode, @workingNO, @articleNO, @round, 
-                  @notifyProductionQuantity, @dateInform, @quantity, @inventoryLocation, @warehouseID, @state, @borrowdQuantity);
+                 (@brand, @BU, @season, @itemCode, @workingNO, @articleNO, @colorwayName, @round, 
+                  @notifyProductionQuantity, @dateInform, @quantity, @state, @borrowdQuantity, 
+                  @exported, @rejected, @createDate, @modifyTime, @uniqueKey);
                  SELECT SCOPE_IDENTITY() AS SampleID;`
             );
 
-        return result.recordset[0].SampleID;
+        return { sampleId: result.recordset[0].SampleID, uniqueKey };
     }
 
     static async updateSample(id, sampleData) {
         const {
             brand,
             BU,
-            season,
-            itemCode,
-            workingNO,
-            articleNO,
-            round,
             notifyProductionQuantity,
             dateInform,
             quantity,
-            inventoryLocation,
-            state
+            state,
+            borrowdQuantity,
+            exported,
+            rejected,
+            colorwayName,
+            modifyTime = new Date(),
         } = sampleData;
-
+        if (sampleData.quantity > sampleData.notifyProductionQuantity) {
+            throw new Error("Quantity không được lớn hơn NotifyProductionQuantity");
+        }
         const pool = await poolPromise;
         const result = await pool.request()
             .input("sampleId", sql.Int, id)
             .input("brand", sql.NVarChar, brand)
             .input("BU", sql.NVarChar, BU)
-            .input("season", sql.NVarChar, season)
-            .input("itemCode", sql.NVarChar, itemCode)
-            .input("workingNO", sql.NVarChar, workingNO)
-            .input("articleNO", sql.NVarChar, articleNO)
-            .input("round", sql.NVarChar, round)
             .input("notifyProductionQuantity", sql.Int, notifyProductionQuantity)
             .input("dateInform", sql.Date, dateInform)
             .input("quantity", sql.Int, quantity)
-            .input("inventoryLocation", sql.NVarChar, inventoryLocation)
             .input("state", sql.NVarChar, state)
+            .input("borrowdQuantity", sql.Int, borrowdQuantity)
+            .input("exported", sql.Int, exported)
+            .input("rejected", sql.Int, rejected)
+            .input("colorwayName", sql.NVarChar, colorwayName)
+            .input("modifyTime", sql.DateTime, modifyTime)
             .query(
                 `UPDATE Samples 
-                 SET Brand = @brand, BU = @BU, Season = @season, ItemCode = @itemCode, WorkingNO = @workingNO, 
-                     ArticleNO = @articleNO, Round = @round, NotifyProductionQuantity = @notifyProductionQuantity, 
-                     DateInform = @dateInform, Quantity = @quantity, InventoryLocation = @inventoryLocation, State = @state
+                 SET Brand = @brand, BU = @BU, NotifyProductionQuantity = @notifyProductionQuantity, 
+                     DateInform = @dateInform, Quantity = @quantity, State = @state, 
+                     BorrowdQuantity = @borrowdQuantity, Exported = @exported, Rejected = @rejected,
+                     ColorwayName = @colorwayName, ModifyTime = @modifyTime
                  WHERE SampleID = @sampleId`
             );
 
@@ -104,21 +117,21 @@ class SampleModel {
         try {
             await transaction.begin();
 
-            // Lấy ItemCode của mẫu trước khi xóa
+            // Lấy UniqueKey của mẫu trước khi xóa
             const sampleResult = await transaction.request()
                 .input("sampleId", sql.Int, id)
-                .query("SELECT ItemCode FROM Samples WHERE SampleID = @sampleId");
+                .query("SELECT UniqueKey FROM Samples WHERE SampleID = @sampleId");
 
             if (sampleResult.recordset.length === 0) {
                 throw new Error("Sample not found");
             }
 
-            const itemCode = sampleResult.recordset[0].ItemCode;
+            const uniqueKey = sampleResult.recordset[0].UniqueKey;
 
             // Xóa các bản ghi liên quan trong QRCodeDetails
             await transaction.request()
-                .input("itemCode", sql.NVarChar, itemCode)
-                .query("DELETE FROM QRCodeDetails WHERE ItemCode = @itemCode");
+                .input("uniqueKey", sql.NVarChar, uniqueKey)
+                .query("DELETE FROM QRCodeDetails WHERE UniqueKey = @uniqueKey");
 
             // Xóa bản ghi trong Samples
             const result = await transaction.request()
@@ -134,32 +147,35 @@ class SampleModel {
             throw err;
         }
     }
-    static async getSampleByItemCode(itemCode) {
+
+    static async getSampleByUniqueKey(uniqueKey) {
         const pool = await poolPromise;
         const result = await pool.request()
-            .input("itemCode", sql.NVarChar, itemCode)
-            .query("SELECT * FROM Samples WHERE ItemCode = @itemCode");
+            .input("uniqueKey", sql.NVarChar, uniqueKey)
+            .query("SELECT * FROM Samples WHERE UniqueKey = @uniqueKey");
 
         return result.recordset[0];
     }
-    static async updateSampleByItemCode(itemCode, updateData, transaction) {
+
+    static async updateSampleByUniqueKey(uniqueKey, updateData, transaction) {
         try {
-            console.log(`updateSampleByItemCode: ItemCode=${itemCode}, UpdateData=`, updateData);
+            console.log(`updateSampleByUniqueKey: UniqueKey=${uniqueKey}, UpdateData=`, updateData);
             const request = transaction.request();
-            request.input('itemCode', sql.NVarChar, itemCode);
+            request.input('uniqueKey', sql.NVarChar, uniqueKey);
             request.input('quantity', sql.Int, updateData.Quantity);
             request.input('borrowdQuantity', sql.Int, updateData.BorrowdQuantity);
             request.input('state', sql.NVarChar, updateData.State);
-
+            request.input('exported', sql.Int, updateData.Exported);
+            request.input('rejected', sql.Int, updateData.Rejected);
             const result = await request.query(`
                 UPDATE Samples 
-                SET Quantity = @quantity, BorrowdQuantity = @borrowdQuantity, State = @state
-                WHERE ItemCode = @itemCode
+                SET Quantity = @quantity, BorrowdQuantity = @borrowdQuantity, State = @state, Exported = @exported, Rejected = @rejected
+                WHERE UniqueKey = @uniqueKey
             `);
-            console.log(`updateSampleByItemCode result: RowsAffected=${result.rowsAffected}`);
+            console.log(`updateSampleByUniqueKey result: RowsAffected=${result.rowsAffected}`);
             if (result.rowsAffected[0] === 0) {
-                console.error(`Không tìm thấy mẫu với ItemCode=${itemCode}`);
-                throw new Error(`Không tìm thấy mẫu với ItemCode=${itemCode}`);
+                console.error(`Không tìm thấy mẫu với UniqueKey=${uniqueKey}`);
+                throw new Error(`Không tìm thấy mẫu với UniqueKey=${uniqueKey}`);
             }
             return result.rowsAffected[0] > 0;
         } catch (error) {
@@ -168,7 +184,56 @@ class SampleModel {
         }
     }
 
-
+    static async getRecentBorrowedTransactions() {
+        const pool = await poolPromise;
+        const result = await pool.request().query(`
+            SELECT 
+                t.TransactionID,
+                t.ActionType,
+                t.UserID,
+                t.DepartmentName,
+                t.Quantity AS TransactionQuantity,
+                t.TransactionDate,
+                t.UserName,
+                td.QRCodeID,
+                t.ToUserName,
+                t.ToDepartmentName,
+                td.DetailID,
+                td.QRIndex,
+                s.Brand,
+                s.BU,
+                s.Season,
+                s.WorkingNO,
+                s.ArticleNO,
+                s.ColorwayName,
+                s.Round,
+                s.NotifyProductionQuantity,
+                s.DateInform,
+                s.Quantity AS SampleQuantity,
+                s.BorrowdQuantity,
+                s.CreateDate,
+                s.ModifyTime,
+                s.UniqueKey,
+                q.Location
+            FROM Transactions t
+            INNER JOIN TransactionDetails td ON t.TransactionID = td.TransactionID
+            INNER JOIN QRCodeDetails q ON td.QRCodeID = q.QRCodeID
+            INNER JOIN Samples s ON q.UniqueKey = s.UniqueKey
+            WHERE 
+                s.BorrowdQuantity > 0
+                AND t.ActionType IN ('Borrow', 'Transfer')
+                AND td.ReturnDate IS NULL
+                AND t.TransactionDate = (
+                    SELECT MAX(t2.TransactionDate)
+                    FROM Transactions t2
+                    INNER JOIN TransactionDetails td2 ON t2.TransactionID = td2.TransactionID
+                    WHERE td2.QRCodeID = q.QRCodeID
+                    AND t2.ActionType IN ('Borrow', 'Transfer')
+                )
+            ORDER BY t.TransactionDate DESC;
+        `);
+        return result.recordset;
+    }
 }
 
 module.exports = SampleModel;

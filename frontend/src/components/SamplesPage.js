@@ -1,12 +1,12 @@
-import React, { useEffect, useState, useCallback } from "react";
-import { Table, Button, Space, Modal, message, Image, Upload, Input, Row, Col, Select, Form, Popconfirm, DatePicker, Tag, Descriptions } from "antd";
+import React, { useState, useCallback } from "react";
+import { Table, Button, Space, Modal, message, Image, Upload, Input, Row, Col, Select, Form, Popconfirm, DatePicker, Tag } from "antd";
 import customParseFormat from "dayjs/plugin/customParseFormat";
-import { UploadOutlined, SearchOutlined, DownloadOutlined } from "@ant-design/icons";
+import { UploadOutlined, SearchOutlined, DownloadOutlined, ScanOutlined, PlusCircleOutlined, DeleteOutlined, FormOutlined, QrcodeOutlined, OrderedListOutlined, ClearOutlined, FileExcelOutlined } from "@ant-design/icons";
 import axios from "axios";
 import dayjs from "dayjs";
 import { useTranslation } from "react-i18next";
-import "../styles/SamplesPage.css"
-
+import "../styles/SamplesPage.css";
+import { usePermissions } from "../context/PermissionContext";
 
 dayjs.extend(customParseFormat);
 
@@ -17,63 +17,178 @@ const SamplePage = () => {
     const [qrModalVisible, setQrModalVisible] = useState(false);
     const [qrCodes, setQrCodes] = useState([]);
     const [currentSample, setCurrentSample] = useState(null);
-    const [searchColumn, setSearchColumn] = useState("SerialNumber");
+    const [searchColumn, setSearchColumn] = useState("ItemCode");
+    const [filterBrand, setFilterBrand] = useState(null);
+    const [filterBU, setFilterBU] = useState(null);
+    const [filterSeason, setFilterSeason] = useState(null);
     const [searchValue, setSearchValue] = useState("");
     const API_BASE = process.env.REACT_APP_API_BASE || "/api";
     const [formVisible, setFormVisible] = useState(false);
     const [editingSample, setEditingSample] = useState(null);
     const [form] = Form.useForm();
-    const [warehouses, setWarehouses] = useState([]);
     const [selectedQRCodes, setSelectedQRCodes] = useState([]);
     const { t } = useTranslation();
-    const [detailModalVisible, setDetailModalVisible] = useState(false);
-    const [detailSample, setDetailSample] = useState(null);
+    const [qrScanValue, setQrScanValue] = useState("");
+    const { permissions } = usePermissions();
+
+    const [selectedRowKeys, setSelectedRowKeys] = useState([]);
+    const [batchQrData, setBatchQrData] = useState([]);
+    const [batchQrModalVisible, setBatchQrModalVisible] = useState(false);
 
     const fetchSamples = useCallback(async (retryCount = 3) => {
         setLoading(true);
         try {
-            const res = await axios.get(`${API_BASE}/samples`);
+            const res = await axios.get(`${API_BASE}/samples?ts=${Date.now()}`);
             setSamples(res.data);
             setFilteredSamples(res.data);
         } catch (err) {
             if (retryCount > 0) {
                 setTimeout(() => fetchSamples(retryCount - 1), 1000);
             } else {
-                message.error("Không thể tải dữ liệu sản phẩm mẫu");
+                message.error("Can't load data of Samples");
             }
         } finally {
             setLoading(false);
         }
     }, [API_BASE]);
 
-    const fetchWarehouses = useCallback(async () => {
-        try {
-            const res = await axios.get(`${API_BASE}/warehouses`);
-            setWarehouses(res.data);
-        } catch (err) {
-            message.error("Không thể tải danh sách kho");
+    //New 
+    const handleGenerateBatchQR = async () => {
+        const selectedSamples = filteredSamples.filter(s => selectedRowKeys.includes(s.SampleID));
+        if (selectedSamples.length === 0) {
+            message.warning(t("noSamplesSelected"));
+            return;
         }
-    }, [API_BASE]);
 
-    useEffect(() => {
-        fetchSamples();
-        fetchWarehouses();
-    }, [fetchSamples, fetchWarehouses]);
+        setLoading(true);
+        try {
+            const res = await axios.post(`${API_BASE}/qr/generate-batch`, { samples: selectedSamples });
+            if (res.data.errors && res.data.errors.length > 0) {
+                message.warning(t("batchGeneratePartialError") + res.data.errors.map(e => e.error).join(", "));
+            }
+            setBatchQrData(res.data.batchResults);
+            setBatchQrModalVisible(true);
+        } catch (err) {
+            message.error(t("failedToGenerateBatchQR"));
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handlePrintBatchQR = () => {
+        if (batchQrData.length === 0) {
+            message.warning(t("noQRCodesToPrint"));
+            return;
+        }
+
+        const printWindow = window.open("", "_blank");
+        if (!printWindow) {
+            message.error(t("failedToOpenPrintWindow"));
+            return;
+        }
+
+        const htmlContent = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>In mã QR hàng loạt</title>
+                <style>
+                    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; margin: 20px; }
+                    .sample-section { margin-bottom: 40px; }
+                    .qr-container { display: flex; flex-wrap: wrap; justify-content: center; }
+                    .qr-item { margin: 15px; text-align: center; }
+                    .qr-image { width: 160px; height: 160px; display: block; border: 1px solid #d9d9d9; border-radius: 8px; }
+                    .qr-label { font-size: 14px; margin-bottom: 5px; }
+                    .print-button { margin: 20px; padding: 10px 20px; font-size: 16px; border-radius: 8px; background-color: #64cacf; border-color: #64cacf; color: #fff; }
+                    @media print {
+                        body { margin: 0; }
+                        .qr-image { width: 160px !important; height: 160px !important; }
+                        .qr-container { page-break-inside: avoid; }
+                        .print-button { display: none; }
+                    }
+                </style>
+            </head>
+            <body>
+                ${batchQrData.map(({ sample, qrCodes }) => `
+                    <div class="sample-section">
+                        <h2>${sample.UniqueKey || "Không xác định"}</h2>
+                        <div class="qr-container">
+                            ${qrCodes.map((qr, idx) => `
+                                <div class="qr-item">
+                                    <img class="qr-image" src="${qr.dataUrl}" alt="QR Code ${idx + 1}" />
+                                    <div class="qr-label">${qr.displayText}</div>
+                                </div>
+                            `).join("")}
+                        </div>
+                    </div>
+                `).join("")}
+                <button class="print-button" onclick="window.print()">In ngay</button>
+            </body>
+            </html>
+        `;
+        printWindow.document.write(htmlContent);
+        printWindow.document.close();
+
+        setTimeout(() => {
+            printWindow.print();
+        }, 1000);
+    };
+
+    // Row selection cho table
+    const rowSelection = {
+        selectedRowKeys,
+        onChange: (keys) => setSelectedRowKeys(keys),
+    };
 
     const handleDelete = async (id) => {
         try {
             await axios.delete(`${API_BASE}/samples/${id}`);
-            message.success("Đã xóa sản phẩm");
+            message.success("Delete successfully!");
             fetchSamples();
         } catch (err) {
-            message.error(err.response?.data?.error || "Không thể xóa sản phẩm. Vui lòng kiểm tra các mã QR liên quan.");
+            message.error(err.response?.data?.error || "Can't delete this item. Please check the QR code related to this item.");
         }
+    };
+
+    const handleQrScanSearch = async (value) => {
+        setQrScanValue(value);
+        if (!value) {
+            setFilteredSamples([]);
+            return;
+        }
+        try {
+            const fields = value.split("|");
+            if (fields.length < 2) {
+                message.error(t("invalidQRCodeFormat"));
+                return;
+            }
+            const res = await axios.post(`${API_BASE}/qr/scan`, { qrCode: value });
+            if (res.data) {
+                setFilteredSamples([res.data]);
+                setQrScanValue("");
+            } else {
+                message.error(t("sampleNotFound"));
+                setFilteredSamples([]);
+            }
+        } catch (err) {
+            message.error(err.response?.data?.error || t("failedToScanQR"));
+            setFilteredSamples([]);
+        }
+    };
+
+    const handleGetAll = () => {
+        fetchSamples();
+    };
+
+    const handleResetTable = () => {
+        setFilteredSamples([]);
+        setSearchValue("");
+        setQrScanValue("");
     };
 
     const handleGenerateQR = async (sample) => {
         try {
             const payload = {
-                serialNumber: sample.SerialNumber,
                 brand: sample.Brand,
                 BU: sample.BU,
                 season: sample.Season,
@@ -83,18 +198,16 @@ const SamplePage = () => {
                 round: sample.Round,
                 notifyProductionQuantity: sample.NotifyProductionQuantity,
                 dateInform: sample.DateInform,
-                quantity: sample.Quantity,
-                inventoryLocation: sample.InventoryLocation
+                uniqueKey: sample.UniqueKey,
             };
 
             const res = await axios.post(`${API_BASE}/qr/generate`, payload);
-            console.log(res.data.qrCodes)
             setQrCodes(res.data.qrCodes);
-
             setCurrentSample(sample);
             setQrModalVisible(true);
         } catch (err) {
-            message.error("Lỗi khi tạo mã QR");
+            console.error("Error generating QR:", err.response?.data || err);
+            message.error(err.response?.data?.error || "Failed to generate QR");
         }
     };
 
@@ -103,13 +216,11 @@ const SamplePage = () => {
             message.warning(t("noQRCodesToPrint"));
             return;
         }
-        console.log("qrCodes:", qrCodes);
         const printWindow = window.open("", "_blank");
         if (!printWindow) {
             message.error(t("failedToOpenPrintWindow"));
             return;
         }
-        console.log("Đã mở printWindow");
 
         const htmlContent = `
             <!DOCTYPE html>
@@ -117,27 +228,26 @@ const SamplePage = () => {
             <head>
                 <title>In tất cả mã QR</title>
                 <style>
-                    body { font-family: Arial, sans-serif; text-align: center; margin: 20px; }
+                    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; margin: 20px; }
                     .qr-container { display: flex; flex-wrap: wrap; justify-content: center; }
                     .qr-item { margin: 15px; text-align: center; }
-                    .qr-image { width: 100px; height: 100px; display: block; }
+                    .qr-image { width: 160px; height: 160px; display: block; border: 1px solid #d9d9d9; border-radius: 8px; }
                     .qr-label { font-size: 14px; margin-bottom: 5px; }
-                    .print-button { margin: 20px; padding: 10px 20px; font-size: 16px; }
+                    .print-button { margin: 20px; padding: 10px 20px; font-size: 16px; border-radius: 8px; background-color: #64cacf; border-color: #64cacf; color: #fff; }
                     @media print {
                         body { margin: 0; }
-                        .qr-image { width: 100px !important; height: 100px !important; }
+                        .qr-image { width: 160px !important; height: 160px !important; }
                         .qr-container { page-break-inside: avoid; }
                         .print-button { display: none; }
                     }
                 </style>
             </head>
             <body>
-                
                 <div class="qr-container">
                     ${qrCodes.map((qr, idx) => `
                         <div class="qr-item">
                             <img class="qr-image" src="${qr.dataUrl}" alt="QR Code ${idx + 1}" />
-                            <div class="qr-label">${currentSample?.ItemCode || "N/A"} | ${idx + 1}</div>
+                            <div class="qr-label">${qr.displayText}</div>
                         </div>
                     `).join("")}
                 </div>
@@ -147,13 +257,9 @@ const SamplePage = () => {
         `;
         printWindow.document.write(htmlContent);
         printWindow.document.close();
-        console.log("Đã viết HTML vào printWindow");
 
-        // Đợi render rồi gọi print
         setTimeout(() => {
-            console.log("Gọi printWindow.print()");
             printWindow.print();
-            // Không đóng cửa sổ ngay để kiểm tra
         }, 1000);
     };
 
@@ -162,42 +268,40 @@ const SamplePage = () => {
             message.warning(t("noSelectedQRCodes"));
             return;
         }
-        console.log("selectedQRCodes:", selectedQRCodes);
         const printWindow = window.open("", "_blank");
         if (!printWindow) {
             message.error(t("failedToOpenPrintWindow"));
             return;
         }
-        console.log("Đã mở printWindow");
 
         const htmlContent = `
             <!DOCTYPE html>
             <html>
             <head>
                 <style>
-                    body { font-family: Arial, sans-serif; text-align: center; margin: 20px; }
+                    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; margin: 20px; }
                     .qr-container { display: flex; flex-wrap: wrap; justify-content: center; }
                     .qr-item { margin: 15px; text-align: center; }
-                    .qr-image { width: 100px; height: 100px; display: block; }
+                    .qr-image { width: 160px; height: 160px; display: block; border: 1px solid #d9d9d9; border-radius: 8px; }
                     .qr-label { font-size: 14px; margin-bottom: 5px; }
-                    .print-button { margin: 20px; padding: 10px 20px; font-size: 16px; }
+                    .print-button { margin: 20px; padding: 10px 20px; font-size: 16px; border-radius: 8px; background-color: #64cacf; border-color: #64cacf; color: #fff; }
                     @media print {
                         body { margin: 0; }
-                        .qr-image { width: 100px !important; height: 100px !important; }
+                        .qr-image { width: 160px !important; height: 160px !important; }
                         .qr-container { page-break-inside: avoid; }
                         .print-button { display: none; }
                     }
                 </style>
             </head>
             <body>
-                <h2>${currentSample?.ItemCode || "Không xác định"}</h2>
+                <h2>${currentSample?.UniqueKey || "Không xác định"}</h2>
                 <div class="qr-container">
                     ${selectedQRCodes.map((qrId, idx) => {
             const qr = qrCodes.find(q => q.qrCodeId === qrId);
             return `
                             <div class="qr-item">
                                 <img class="qr-image" src="${qr?.dataUrl || ""}" alt="QR Code ${idx + 1}" />
-                                <div class="qr-label">${currentSample?.ItemCode || "N/A"} | ${idx + 1}</div>
+                                <div class="qr-label">${qr?.displayText || "N/A"}</div>
                             </div>
                         `;
         }).join("")}
@@ -208,14 +312,11 @@ const SamplePage = () => {
         `;
         printWindow.document.write(htmlContent);
         printWindow.document.close();
-        console.log("Đã viết HTML vào printWindow");
 
         setTimeout(() => {
-            console.log("Gọi printWindow.print()");
             printWindow.print();
         }, 1000);
     };
-
 
     const handleImport = async (file) => {
         const formData = new FormData();
@@ -223,15 +324,12 @@ const SamplePage = () => {
 
         try {
             const response = await axios.post(`${API_BASE}/samples/import`, formData, {
-                headers: { "Content-Type": "multipart/form-data" }
+                headers: { "Content-Type": "multipart/form-data" },
             });
-
-            console.log("API Response:", response.data);
 
             const { message: apiMessage, errors } = response.data;
 
             if (Array.isArray(errors) && errors.length > 0) {
-                // Hiển thị lỗi chi tiết
                 const errorDetails = errors.map((err, index) => {
                     return `${t("error")} ${index + 1}: ${err.error}`;
                 }).join("\n");
@@ -241,7 +339,7 @@ const SamplePage = () => {
                         <>
                             <p>{apiMessage || t("importFailed")}</p>
                             <p>{t("errorDetails")}:</p>
-                            <pre style={{ maxHeight: "200px", overflow: "auto" }}>{errorDetails}</pre>
+                            <pre style={{ maxHeight: "199px", overflow: "auto" }}>{errorDetails}</pre>
                         </>
                     ),
                     duration: 5,
@@ -261,34 +359,84 @@ const SamplePage = () => {
 
     const handleSearch = (value) => {
         setSearchValue(value);
-        const filtered = samples.filter((s) =>
-            s[searchColumn]?.toString().toLowerCase().includes(value.toLowerCase())
-        );
+        let filtered = samples;
+
+        if (filterBrand) {
+            filtered = filtered.filter(s => s.Brand === filterBrand);
+        }
+        if (filterBU) {
+            filtered = filtered.filter(s => s.BU === filterBU);
+        }
+        if (filterSeason) {
+            filtered = filtered.filter(s => s.Season === filterSeason);
+        }
+
+        if (value) {
+            filtered = filtered.filter(s =>
+                s[searchColumn]?.toString().toLowerCase().includes(value.toLowerCase())
+            );
+        }
+
         setFilteredSamples(filtered);
     };
 
-    const handleSearchColumnChange = (value) => {
-        setSearchColumn(value);
+    const handleFilterChange = (key, value) => {
+        if (key === 'Brand') setFilterBrand(value);
+        if (key === 'BU') setFilterBU(value);
+        if (key === 'Season') setFilterSeason(value);
+
+        let filtered = samples;
+
+        if (key === 'Brand' || filterBrand) {
+            filtered = filtered.filter(s => s.Brand === (key === 'Brand' ? value : filterBrand));
+        }
+        if (key === 'BU' || filterBU) {
+            filtered = filtered.filter(s => s.BU === (key === 'BU' ? value : filterBU));
+        }
+        if (key === 'Season' || filterSeason) {
+            filtered = filtered.filter(s => s.Season === (key === 'Season' ? value : filterSeason));
+        }
+
         if (searchValue) {
-            const filtered = samples.filter((s) =>
-                s[value]?.toString().toLowerCase().includes(searchValue.toLowerCase())
+            filtered = filtered.filter(s =>
+                s[searchColumn]?.toString().toLowerCase().includes(searchValue.toLowerCase())
             );
-            setFilteredSamples(filtered);
-        } else {
-            setFilteredSamples(samples);
+        }
+
+        setFilteredSamples(filtered);
+    };
+
+    const handleExportAvailableAndBorrowed = async () => {
+        try {
+            const response = await axios.get(`${API_BASE}/samples/export-available-and-borrowed`, {
+                responseType: 'blob',
+            });
+
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `available_and_borrowed_samples_${dayjs().format('YYYYMMDD_HHmmss')}.xlsx`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+
+            message.success(t("exportSuccess"));
+        } catch (err) {
+            message.error(t("exportFailed"));
+            console.error("Export Error:", err);
         }
     };
+
     const columns = [
-        {
-            title: t("serialNumber"),
-            render: (_, __, index) => index + 1,
-        },
+        { title: t("serialNumber"), render: (_, __, index) => index + 1 },
         { title: t("brand"), dataIndex: "Brand" },
         { title: "BU", dataIndex: "BU" },
         { title: t("season"), dataIndex: "Season" },
         { title: t("itemCode"), dataIndex: "ItemCode" },
         { title: t("workingNo."), dataIndex: "WorkingNO" },
         { title: t("articleNo."), dataIndex: "ArticleNO" },
+        { title: t("colorwayName"), dataIndex: "ColorwayName" },
         { title: t("round"), dataIndex: "Round" },
         { title: t("notifyProductQuantity"), dataIndex: "NotifyProductionQuantity" },
         {
@@ -297,204 +445,237 @@ const SamplePage = () => {
             render: (text) => {
                 const date = new Date(text);
                 return isNaN(date) ? t("invalidDate") : dayjs(date).format("MM/DD/YYYY");
-            }
+            },
         },
         { title: t("stockQuantity"), dataIndex: "Quantity" },
-        { title: t("location"), dataIndex: "InventoryLocation" },
         {
             title: t("state"),
             dataIndex: "State",
-            render: (state) => {
-                let color = "red";
-                if (state === "Available") {
-                    color = "green";
-                }
-                return <Tag color={color} style={{ fontWeight: "bold" }}>{state}</Tag>;
-            }
+            render: (text) => (
+                <Tag
+                    color={
+                        text === "Available" ? "green" :
+                            text === "Unavailable" ? "red" :
+                                text === "Exported" ? "blue" : "default"
+                    }
+                >
+                    {text}
+                </Tag>
+            ),
         },
         { title: t("borrowed"), dataIndex: "BorrowdQuantity" },
+        { title: t("exported"), dataIndex: "Exported" },
+        { title: t("rejected"), dataIndex: "Rejected" },
+        {
+            title: t("createDate"),
+            dataIndex: "CreateDate",
+            render: (text) => {
+                const date = new Date(text);
+                return isNaN(date) ? t("invalidDate") : dayjs(date).format("MM/DD/YYYY HH:mm:ss");
+            }
+        },
+        {
+            title: t("modifyTime"),
+            dataIndex: "ModifyTime",
+            render: (text) => {
+                const date = new Date(text);
+                return isNaN(date) ? t("invalidDate") : dayjs(date).format("MM/DD/YYYY HH:mm:ss");
+            }
+        },
         {
             title: t("action"),
-            key: "action",
             render: (_, record) => (
                 <Space>
-                    <Button type="primary" onClick={(e) => {
-                        e.stopPropagation();
-                        setEditingSample(record);
-                        form.setFieldsValue({
-                            ...record,
-                            DateInform: record.DateInform ? dayjs(record.DateInform) : null,
-                            WarehouseID: warehouses.find(w => w.WarehouseName === record.InventoryLocation)?.WarehouseID
-                        });
-                        setFormVisible(true);
-                    }}>
-                        {t("edit")}
-                    </Button>
-                    <Popconfirm
-                        title={t("deleteConfirm")}
-                        onConfirm={() => handleDelete(record.SampleID)}
-                        okText={t("yes")}
-                        cancelText={t("no")}
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <Button danger >{t("delete")}</Button>
-                    </Popconfirm>
-                    <Button type="primary" onClick={(e) => {
-                        e.stopPropagation();
-                        handleGenerateQR(record);
-                    }}>
-                        {t("generate")}
-                    </Button>
+                    {permissions.includes("edit_sample") && (
+                        <Button
+                            type="primary"
+                            icon={<FormOutlined />}
+                            disabled={record.BorrowdQuantity > 0 || record.Exported > 0 || record.Rejected > 0}
+                            onClick={() => {
+                                setEditingSample(record);
+                                form.setFieldsValue({
+                                    Brand: record.Brand,
+                                    BU: record.BU,
+                                    Season: record.Season,
+                                    ItemCode: record.ItemCode,
+                                    WorkingNO: record.WorkingNO,
+                                    ArticleNO: record.ArticleNO,
+                                    ColorwayName: record.ColorwayName,
+                                    Round: record.Round,
+                                    NotifyProductionQuantity: record.NotifyProductionQuantity,
+                                    DateInform: record.DateInform ? dayjs(record.DateInform) : null,
+                                    Quantity: record.Quantity,
+                                });
+                                setFormVisible(true);
+                            }}
+                        >
+                            {t("edit")}
+                        </Button>
+                    )}
+                    {permissions.includes("delete_sample") && (
+                        <Popconfirm
+                            title={t("confirmDelete")}
+                            onConfirm={() => handleDelete(record.SampleID)}
+                        >
+                            <Button danger icon={<DeleteOutlined />}>{t("delete")}</Button>
+                        </Popconfirm>
+                    )}
+                    {permissions.includes("generate_qr") && (
+                        <Button
+                            type="primary"
+                            icon={<QrcodeOutlined />}
+                            onClick={() => handleGenerateQR(record)}>
+                            {t("generate")}
+                        </Button>
+                    )}
                 </Space>
-            )
-        }
+            ),
+        },
     ];
 
     return (
         <div className="sample-page">
             <h3>{t("sample")}</h3>
-
-            <Row gutter={16} style={{ marginBottom: 16 }}>
-                <Col>
+            <Row className="filter-row" gutter={[16, 16]} style={{ marginBottom: 16 }}>
+                <Col xs={24} sm={12} md={8} lg={2}>
                     <Select
+                        placeholder={t("selectSearchColumn")}
                         value={searchColumn}
-                        onChange={handleSearchColumnChange}
-                        style={{ width: 160 }}
-                        options={[
-                            { label: t("brand"), value: "Brand" },
-                            { label: "BU", value: "BU" },
-                            { label: t("season"), value: "Season" },
-                            { label: t("itemCode"), value: "ItemCode" },
-                            { label: t("warehouse"), value: "InventoryLocation" },
-                            { label: t("state"), value: "State" }
-                        ]}
-                    />
+                        onChange={setSearchColumn}
+                        style={{ width: '100%' }}
+                    >
+                        <Select.Option value="ItemCode">{t("itemCode")}</Select.Option>
+                        <Select.Option value="WorkingNO">{t("workingNo.")}</Select.Option>
+                        <Select.Option value="Season">{t("season")}</Select.Option>
+                        <Select.Option value="Round">{t("round")}</Select.Option>
+                        <Select.Option value="ArticleNO">{t("articleNo.")}</Select.Option>
+                    </Select>
                 </Col>
-                <Col>
-                    <Input
-                        placeholder={`${t("search")} ${searchColumn}`}
-                        prefix={<SearchOutlined />}
+                <Col xs={24} sm={12} md={8} lg={4}>
+                    <Input.Search
+                        placeholder={t("search")}
                         value={searchValue}
                         onChange={(e) => handleSearch(e.target.value)}
+                        onSearch={handleSearch}
                         allowClear
+                        style={{ width: '100%' }}
+                        enterButton={<SearchOutlined />}
+                    />
+                </Col>
+                <Col xs={24} sm={12} md={8} lg={3}>
+                    <Select
+                        placeholder={t("filterBrand")}
+                        value={filterBrand}
+                        onChange={(value) => handleFilterChange('Brand', value)}
+                        allowClear
+                    >
+                        {[...new Set(samples.map(s => s.Brand))].map(brand => (
+                            <Select.Option key={brand} value={brand}>{brand}</Select.Option>
+                        ))}
+                    </Select>
+                </Col>
+                <Col xs={24} sm={12} md={8} lg={3}>
+                    <Select
+                        placeholder={t("filterBU")}
+                        value={filterBU}
+                        onChange={(value) => handleFilterChange('BU', value)}
+                        allowClear
+                    >
+                        {[...new Set(samples.map(s => s.BU))].map(bu => (
+                            <Select.Option key={bu} value={bu}>{bu}</Select.Option>
+                        ))}
+                    </Select>
+                </Col>
+                <Col xs={24} sm={12} md={8} lg={3}>
+                    <Select
+                        placeholder={t("filterSeason")}
+                        value={filterSeason}
+                        onChange={(value) => handleFilterChange('Season', value)}
+                        allowClear
+                    >
+                        {[...new Set(samples.map(s => s.Season))].map(season => (
+                            <Select.Option key={season} value={season}>{season}</Select.Option>
+                        ))}
+                    </Select>
+                </Col>
+                <Col>
+                    <Input.Search
+                        placeholder={t("scanQRPlaceholder")}
+                        onSearch={handleQrScanSearch}
+                        value={qrScanValue}
+                        onChange={(e) => setQrScanValue(e.target.value)}
+                        allowClear
+                        enterButton={<ScanOutlined />}
                     />
                 </Col>
                 <Col>
-                    <Button type="primary" onClick={() => {
-                        setEditingSample(null);
-                        form.resetFields();
-                        setFormVisible(true);
-                    }}>
-                        {t("add")} {t("sample")}
+                    <Button type="default" onClick={handleResetTable} icon={<ClearOutlined />}>
+                        {t("resetTable")}
                     </Button>
                 </Col>
-
                 <Col>
-                    <Upload beforeUpload={handleImport} showUploadList={false}>
-                        <Button type="primary" icon={<UploadOutlined />}>{t("import")}</Button>
-                    </Upload>
+                    <Button type="primary" onClick={handleGetAll} icon={<OrderedListOutlined />}>
+                        {t("getAllSamples")}
+                    </Button>
                 </Col>
-
+            </Row>
+            <Row className="action-row" gutter={[16, 16]} style={{ marginBottom: 16 }}>
+                {permissions.includes("add_sample") && (
+                    <Col>
+                        <Button
+                            icon={<PlusCircleOutlined />}
+                            type="primary"
+                            onClick={() => {
+                                setEditingSample(null);
+                                form.resetFields();
+                                setFormVisible(true);
+                            }}
+                        >
+                            {t("add")}
+                        </Button>
+                    </Col>
+                )}
+                {permissions.includes("add_sample") && (
+                    <Col>
+                        <Upload beforeUpload={handleImport} showUploadList={false}>
+                            <Button type="primary" icon={<UploadOutlined />}>{t("import")}</Button>
+                        </Upload>
+                    </Col>
+                )}
                 <Col>
-                    <a
-                        href="/template/Import_template.xlsx"
-                        download
-                    >
+                    <a href="/template/Import_template.xlsx" download>
                         <Button icon={<DownloadOutlined />}>
                             {t("downloadTemplate")}
                         </Button>
                     </a>
-
                 </Col>
+                <Col>
+                    <Button icon={<FileExcelOutlined />} onClick={handleExportAvailableAndBorrowed} >
+                        {t("exportAvailableAndBorrowed")}
+                    </Button>
+                </Col>
+                {permissions.includes("generate_qr") && (
+                    <Col>
+                        <Button
+                            type="primary"
+                            icon={<QrcodeOutlined />}
+                            onClick={handleGenerateBatchQR}
+                            disabled={selectedRowKeys.length === 0}
+                        >
+                            {t("generateBatchQR")}
+                        </Button>
+                    </Col>
+                )}
             </Row>
-
             <Table
-                rowKey="SampleID"
                 className="sample-page-table"
+                rowSelection={rowSelection}
                 columns={columns}
                 dataSource={filteredSamples}
                 loading={loading}
-                pagination={{ pageSize: 10 }}
-                onRow={(record) => ({
-                    onClick: (e) => {
-                        if (e.target.closest('button') || e.target.closest('.ant-popconfirm')) {
-                            return;
-                        }
-                        setDetailSample(record);
-                        setDetailModalVisible(true);
-                    }
-                })}
+                rowKey="SampleID"
             />
-            {/* Detail Modal */}
-            <Modal
-                className="sample-detail"
-                title={`Chi tiết Sample – ${detailSample?.ItemCode}`}
-                open={detailModalVisible}
-                onCancel={() => setDetailModalVisible(false)}
-                footer={null}
-                width={700}
-            >
-                {detailSample && (
-                    <Descriptions
-                        column={2}
-                        bordered
-                        size="middle"
-                        labelStyle={{ fontWeight: 'bold', width: 180 }}
-                    >
-                        <Descriptions.Item label={t("brand")}>
-                            {detailSample.Brand}
-                        </Descriptions.Item>
 
-                        <Descriptions.Item label={t("BU")}>
-                            {detailSample.BU}
-                        </Descriptions.Item>
-                        <Descriptions.Item label={t("season")}>
-                            {detailSample.Season}
-                        </Descriptions.Item>
-
-                        <Descriptions.Item label={t("itemCode")}>
-                            {detailSample.ItemCode}
-                        </Descriptions.Item>
-                        <Descriptions.Item label={t("workingNo")}>
-                            {detailSample.WorkingNO}
-                        </Descriptions.Item>
-
-                        <Descriptions.Item label={t("articleNo")}>
-                            {detailSample.ArticleNO}
-                        </Descriptions.Item>
-                        <Descriptions.Item label={t("round")}>
-                            {detailSample.Round}
-                        </Descriptions.Item>
-
-                        <Descriptions.Item label={t("notifyProductQuantity")}>
-                            {detailSample.NotifyProductionQuantity}
-                        </Descriptions.Item>
-                        <Descriptions.Item label={t("notificationDate")}>
-                            {dayjs(detailSample.DateInform).format("MM/DD/YYYY")}
-                        </Descriptions.Item>
-
-                        <Descriptions.Item label={t("stockQuantity")}>
-                            {detailSample.Quantity}
-                        </Descriptions.Item>
-                        <Descriptions.Item label={t("borrowed")}>
-                            {detailSample.BorrowdQuantity}
-                        </Descriptions.Item>
-
-                        <Descriptions.Item label={t("location")}>
-                            {detailSample.InventoryLocation}
-                        </Descriptions.Item>
-                        <Descriptions.Item label={t("state")}>
-                            <Tag color={
-                                detailSample.State === "Available" ? "green" :
-                                    detailSample.State === "Unavailable" ? "red" :
-                                        detailSample.State === "Exported" ? "blue" : "default"
-                            }>
-                                {detailSample.State}
-                            </Tag>
-                        </Descriptions.Item>
-                    </Descriptions>
-                )}
-            </Modal>
             <Modal
                 title={`${t("generate")} - ${currentSample?.ItemCode}`}
                 open={qrModalVisible}
@@ -512,7 +693,7 @@ const SamplePage = () => {
                                 <div style={{ textAlign: "center" }}>
                                     <Image src={qr.dataUrl} width={120} />
                                     <div style={{ marginTop: 4, fontSize: 12 }}>
-                                        {currentSample?.ItemCode} | {idx + 1}
+                                        {qr.displayText}
                                     </div>
                                     <div>
                                         <input
@@ -532,11 +713,7 @@ const SamplePage = () => {
                                 </div>
                             </Col>
                         ))}
-
-
-
                     </Row>
-
                     <Space style={{ marginTop: 24 }}>
                         <Button
                             type="default"
@@ -547,16 +724,45 @@ const SamplePage = () => {
                         </Button>
                         <Button
                             type="primary"
-                            style={{ backgroundColor: '#64cacf', borderColor: '#64cacf' }}
                             onClick={() => handlePrintAllQRCodes()}
                         >
                             {t("printAllQR")}
                         </Button>
-
                     </Space>
                 </div>
             </Modal>
-
+            {/* Modal mới cho batch */}
+            <Modal
+                title={t("batchQRModalTitle")}
+                open={batchQrModalVisible}
+                onCancel={() => {
+                    setBatchQrModalVisible(false);
+                    setSelectedRowKeys([]);
+                }}
+                footer={null}
+                width={800}
+            >
+                <div style={{ textAlign: "center" }}>
+                    {batchQrData.map(({ sample, qrCodes }) => (
+                        <div key={sample.SampleID} style={{ marginBottom: 24 }}>
+                            <h3>{sample.ItemCode}</h3>
+                            <Row gutter={[16, 16]} justify="center">
+                                {qrCodes.map((qr) => (
+                                    <Col key={qr.qrCodeId}>
+                                        <Image src={qr.dataUrl} width={120} />
+                                        <div style={{ marginTop: 4, fontSize: 12 }}>{qr.displayText}</div>
+                                    </Col>
+                                ))}
+                            </Row>
+                        </div>
+                    ))}
+                    <Space style={{ marginTop: 24 }}>
+                        <Button type="primary" onClick={handlePrintBatchQR}>
+                            {t("printAllQR")}
+                        </Button>
+                    </Space>
+                </div>
+            </Modal>
 
             <Modal
                 title={editingSample ? t("edit") : `${t("add")} ${t("sample")}`}
@@ -569,90 +775,76 @@ const SamplePage = () => {
                     form={form}
                     layout="vertical"
                     onFinish={async (values) => {
-                        console.log("Giá trị form gốc:", values);
                         const formattedValues = {
-                            serialNumber: values.SerialNumber,
                             brand: values.Brand,
                             BU: values.BU,
                             season: values.Season,
                             itemCode: values.ItemCode,
                             workingNO: values.WorkingNO,
                             articleNO: values.ArticleNO,
+                            colorwayName: values.ColorwayName,
                             round: values.Round,
                             notifyProductionQuantity: parseInt(values.NotifyProductionQuantity),
                             dateInform: values.DateInform ? values.DateInform.toISOString() : null,
-                            quantity: parseInt(values.Quantity),
-                            inventoryLocation: warehouses.find(w => w.WarehouseID === values.WarehouseID)?.WarehouseName || '',
-                            warehouseID: values.WarehouseID,
+                            quantity: parseInt(values.Quantity) || 0,
                             state: editingSample?.State || 'Available',
+                            borrowdQuantity: editingSample?.BorrowdQuantity || 0,
+                            exported: editingSample?.Exported || 0,
+                            rejected: editingSample?.Rejected || 0,
+                            modifyTime: new Date(),
                         };
-
 
                         try {
                             if (editingSample) {
                                 await axios.put(`${API_BASE}/samples/${editingSample.SampleID}`, formattedValues);
-                                message.success("Đã cập nhật sản phẩm");
+                                message.success("Updated successfully!");
                             } else {
                                 await axios.post(`${API_BASE}/samples`, formattedValues);
-                                message.success("Đã thêm sản phẩm");
+                                message.success("Added successfully!");
                             }
                             setFormVisible(false);
                             fetchSamples();
                         } catch (err) {
-                            message.error("Lỗi khi lưu sản phẩm");
+                            message.error("Fail!");
                             console.error(err);
                         }
                     }}
                 >
-
-                    <Form.Item label={t("brand")} name="Brand" rules={[{ required: true }]}>
+                    <Form.Item label={t("brand")} name="Brand">
                         <Input />
                     </Form.Item>
                     <Form.Item label="BU" name="BU">
                         <Input />
                     </Form.Item>
-                    <Form.Item label={t("season")} name="Season">
-                        <Input />
+                    <Form.Item name="Season" label={t("season")} rules={[{ required: true, message: t("required") }]}>
+                        <Input disabled={editingSample} />
                     </Form.Item>
-                    <Form.Item label={t("itemCode")} name="ItemCode">
-                        <Input />
+                    <Form.Item name="ItemCode" label={t("itemCode")} rules={[{ required: true, message: t("pleaseInputItemCode") }]}>
+                        <Input disabled={editingSample} />
                     </Form.Item>
                     <Form.Item label={t("workingNo.")} name="WorkingNO">
                         <Input />
                     </Form.Item>
-                    <Form.Item label={t("articleNo.")} name="ArticleNO">
+                    <Form.Item name="ArticleNO" label={t("articleNo.")} rules={[{ required: true, message: t("required") }]}>
+                        <Input disabled={editingSample} />
+                    </Form.Item>
+                    <Form.Item name="ColorwayName" label={t("colorwayName")} rules={[{ required: true, message: t("required") }]}>
                         <Input />
                     </Form.Item>
-                    <Form.Item label={t("round")} name="Round">
-                        <Input />
+                    <Form.Item name="Round" label={t("round")} rules={[{ required: true, message: t("required") }]}>
+                        <Input disabled={editingSample} />
                     </Form.Item>
-                    <Form.Item label={t("notifyProductQuantity")} name="NotifyProductionQuantity">
+                    <Form.Item label={t("notifyProductQuantity")} name="NotifyProductionQuantity" rules={[{ required: true, message: t("required") }]}>
                         <Input type="number" />
                     </Form.Item>
                     <Form.Item label={t("notificationDate")} name="DateInform">
                         <DatePicker format="DD/MM/YYYY" style={{ width: "100%" }} />
                     </Form.Item>
-                    <Form.Item label={t("stockQuantity")} name="Quantity" rules={[{ required: true }]}>
-                        <Input type="number" />
-                    </Form.Item>
-                    <Form.Item
-                        label={t("location")}
-                        name="WarehouseID"
-                        rules={[{ required: true, message: t("selectWarehouse") }]}
-                    >
-                        <Select placeholder={t("selectWarehouse")}>
-                            {warehouses.map((wh) => (
-                                <Select.Option key={wh.WarehouseID} value={wh.WarehouseID}>
-                                    {wh.WarehouseName}
-                                </Select.Option>
-                            ))}
-                        </Select>
+                    <Form.Item label={t("stockQuantity")} name="Quantity" >
+                        <Input type="number" disabled={!editingSample || editingSample} />
                     </Form.Item>
                 </Form>
             </Modal>
-
-
-
         </div>
     );
 };

@@ -23,7 +23,7 @@ const GroupManagementPage = () => {
         async () => {
             setLoading(true);
             try {
-                const response = await axios.get(`${API_BASE}/groups`);
+                const response = await axios.get(`${API_BASE}/groups?ts=${Date.now()}`);
                 setGroups(response.data);
             } catch (error) {
                 console.error("Error fetching groups:", error);
@@ -35,7 +35,7 @@ const GroupManagementPage = () => {
 
     const fetchGroupUsers = async (groupId) => {
         try {
-            const response = await axios.get(`${API_BASE}/groups/${groupId}/users`);
+            const response = await axios.get(`${API_BASE}/groups/${groupId}/users?ts=${Date.now()}`);
             setGroupUsers(response.data);
         } catch (error) {
             console.error("Error fetching group users:", error);
@@ -46,7 +46,7 @@ const GroupManagementPage = () => {
     const fetchAllUsers = useCallback(
         async () => {
             try {
-                const response = await axios.get(`${API_BASE}/users`);
+                const response = await axios.get(`${API_BASE}/users?ts=${Date.now()}`);
                 setAllUsers(response.data);
             } catch (error) {
                 console.error("Error fetching users:", error);

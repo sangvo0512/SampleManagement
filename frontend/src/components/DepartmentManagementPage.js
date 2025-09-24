@@ -18,7 +18,7 @@ const DepartmentManagement = () => {
         async () => {
             setLoading(true);
             try {
-                const response = await axios.get(`${API_BASE}/departments`);
+                const response = await axios.get(`${API_BASE}/departments?ts=${Date.now()}`);
                 setDepartments(response.data);
             } catch (error) {
                 console.error("Error fetching departments:", error);

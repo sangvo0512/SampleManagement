@@ -37,7 +37,7 @@ const AccessManagementPage = () => {
 
     const fetchUsers = useCallback(async () => {
         try {
-            const res = await axios.get(`${API_BASE}/users`);
+            const res = await axios.get(`${API_BASE}/users?ts=${Date.now()}`);
             setUsers(res.data);
             setFilteredUsers(res.data);
         } catch (err) {
@@ -47,7 +47,7 @@ const AccessManagementPage = () => {
 
     const fetchGroups = useCallback(async () => {
         try {
-            const res = await axios.get(`${API_BASE}/groups`);
+            const res = await axios.get(`${API_BASE}/groups?ts=${Date.now()}`);
             setGroups(res.data);
             setFilteredGroups(res.data);
         } catch (err) {
@@ -57,7 +57,7 @@ const AccessManagementPage = () => {
 
     const fetchPermissions = useCallback(async () => {
         try {
-            const res = await axios.get(`${API_BASE}/permissions`);
+            const res = await axios.get(`${API_BASE}/permissions?ts=${Date.now()}`);
             setPermissions(res.data);
         } catch (err) {
             message.error("Failed to load permissions");
@@ -86,7 +86,7 @@ const AccessManagementPage = () => {
 
     const fetchUserPermissions = async (userId) => {
         try {
-            const res = await axios.get(`${API_BASE}/permissions/user/${userId}`);
+            const res = await axios.get(`${API_BASE}/permissions/user/${userId}?ts=${Date.now()}`);
             setUserPermissions(res.data);
         } catch {
             message.error("Failed to load user permissions");
@@ -95,7 +95,7 @@ const AccessManagementPage = () => {
 
     const fetchGroupPermissions = async (GroupId) => {
         try {
-            const res = await axios.get(`${API_BASE}/permissions/group/${GroupId}`);
+            const res = await axios.get(`${API_BASE}/permissions/group/${GroupId}?ts=${Date.now()}`);
             setGroupPermissions(res.data);
         } catch {
             message.error("Failed to load group permissions");
