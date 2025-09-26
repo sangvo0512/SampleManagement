@@ -48,6 +48,7 @@ const ConfirmStep = ({ qrList, formData, actionType, onBack, onConfirm, loading,
                         <Descriptions.Item label={t("borrowDepartment")}>{formData.DepartmentName || t("notSpecified")}</Descriptions.Item>
                         <Descriptions.Item label={t("receiver")}>{formData.ReceiverName || t("notSpecified")}</Descriptions.Item>
                         <Descriptions.Item label={t("receiverDepartment")}>{formData.ToDepartmentName || t("notSpecified")}</Descriptions.Item>
+                        <Descriptions.Item label={t("returnLocation")}>{formData.ReturnLocation || t("notSpecified")}</Descriptions.Item>
                         <Descriptions.Item label={t("returnDate")}>{today}</Descriptions.Item>
                         <Descriptions.Item label={t("returnCount")}>{qrList.length}</Descriptions.Item>
                     </Descriptions>
@@ -73,6 +74,7 @@ const ConfirmStep = ({ qrList, formData, actionType, onBack, onConfirm, loading,
                         <Descriptions.Item label={t("exportDate")}>{today}</Descriptions.Item>
                         <Descriptions.Item label={t("exportDepartment")}>{formData.DepartmentName || t("notSpecified")}</Descriptions.Item>
                         <Descriptions.Item label={t("exportReason")}>{operationCode?.ReasonDetail || t("notSpecified")}</Descriptions.Item>
+                        <Descriptions.Item label={t("note")}>{formData.Note || t("notSpecified")}</Descriptions.Item> {/* Thêm Note */}
                         <Descriptions.Item label={t("exportCount")}>{qrList.length}</Descriptions.Item>
                     </Descriptions>
                 );

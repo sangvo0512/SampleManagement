@@ -200,5 +200,9 @@
     "batchGeneratePartialError": "批次生成錯誤：",
     "failedToGenerateBatchQR": "無法批次生成 QR 碼",
     "batchQRModalTitle": "選擇多個 QR 碼",
-    "generateBatchQR": "批次生成 QR 碼"
+    "generateBatchQR": "批次生成 QR 碼",
+    "total_items": "數量",
+    "note_inventory": "數量 / 總數量",
+    "returnLocation": "庫存位置",
+    "enterNote": "備註"
 }

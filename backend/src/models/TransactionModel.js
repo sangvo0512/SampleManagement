@@ -3,7 +3,7 @@ const SampleModel = require('./SampleModel');
 
 class TransactionModel {
     // Ghi log hành động sản phẩm vào ProductLogs
-    static async logProductAction({ UniqueKey, ActionType, Quantity, TransactionID, UserName, DepartmentName, QRCodeID, OperationCodeID, DetailID, ToUserName, ToDepartmentName }, transaction) {
+    static async logProductAction({ UniqueKey, ActionType, Quantity, TransactionID, UserName, DepartmentName, QRCodeID, OperationCodeID, DetailID, ToUserName, ToDepartmentName, Note = null }, transaction) {
         try {
             const actionTypeMap = {
                 'Mượn': 'Borrow',
@@ -31,12 +31,13 @@ class TransactionModel {
             request.input('OperationCodeID', sql.Int, ['Export', 'Reject'].includes(normalizedActionType) ? OperationCodeID : null);
             request.input('ToUserName', sql.NVarChar(50), ToUserName || null);
             request.input('ToDepartmentName', sql.NVarChar(100), ToDepartmentName || null);
+            request.input('Note', sql.NVarChar(50), Note || null);
 
             await request.query(`
                 INSERT INTO ProductLogs
-                (UniqueKey, ActionType, Quantity, TransactionID, UserName, DepartmentName, QRCodeID, Date, DetailID, OperationCodeID, ToUserName, ToDepartmentName)
+                (UniqueKey, ActionType, Quantity, TransactionID, UserName, DepartmentName, QRCodeID, Date, DetailID, OperationCodeID, ToUserName, ToDepartmentName, Note)
                 VALUES
-                (@UniqueKey, @ActionType, @Quantity, @TransactionID, @UserName, @DepartmentName, @QRCodeID, GETDATE(), @DetailID, @OperationCodeID, @ToUserName, @ToDepartmentName)
+                (@UniqueKey, @ActionType, @Quantity, @TransactionID, @UserName, @DepartmentName, @QRCodeID, GETDATE(), @DetailID, @OperationCodeID, @ToUserName, @ToDepartmentName, @Note)
             `);
             console.log(`logProductAction hoàn tất`);
         } catch (error) {
@@ -136,7 +137,7 @@ class TransactionModel {
 
     // Tạo giao dịch, hỗ trợ nhiều UniqueKey
     static async createTransaction(data, transaction = null) {
-        const { ActionType, UserName, DepartmentName, TransactionDate, items, OperationCodeID, ToUserName, ToDepartmentName } = data;
+        const { ActionType, UserName, DepartmentName, TransactionDate, items, OperationCodeID, ToUserName, ToDepartmentName, ReturnLocation, Note = null } = data;
         const actionTypeMap = {
             'Mượn': 'Borrow',
             'Trả': 'Return',
@@ -280,20 +281,23 @@ class TransactionModel {
                     };
                 }
             }
-
-            // Cập nhật trạng thái QR code
+            // Cập nhật trạng thái QR code và Location nếu là Export
             if (['Borrow', 'Export', 'Reject'].includes(normalizedActionType)) {
                 const status = normalizedActionType === 'Borrow' ? 'Borrowed' : normalizedActionType === 'Export' ? 'Exported' : 'Rejected';
                 const request = localTransaction.request();
                 request.input('Status', sql.NVarChar(20), status);
+                let locationUpdate = '';
+                if (normalizedActionType === 'Export') {
+                    locationUpdate = ', Location = NULL';  // Set Location = NULL cho Export
+                }
                 qrCodeIds.forEach((id, i) => {
                     request.input(`QRCodeID${i}`, sql.NVarChar(150), id);
                 });
                 await request.query(`
-                UPDATE QRCodeDetails
-                SET Status = @Status
-                WHERE QRCodeID IN (${qrCodeIds.map((_, i) => `@QRCodeID${i}`).join(',')})
-            `);
+                    UPDATE QRCodeDetails
+                    SET Status = @Status${locationUpdate}
+                    WHERE QRCodeID IN (${qrCodeIds.map((_, i) => `@QRCodeID${i}`).join(',')})
+                `);
             }
 
             // Cập nhật mẫu
@@ -322,13 +326,27 @@ class TransactionModel {
                     Quantity: item.Quantity,
                     TransactionID: transactionId,
                     UserName,
-                    DepartmentName,   // <-- đổi sang DepartmentName
+                    DepartmentName,
                     QRCodeID,
                     OperationCodeID,
                     DetailID: detailId,
                     ToUserName,
-                    ToDepartmentName
+                    ToDepartmentName,
+                    Note
                 }, localTransaction);
+            }
+            // Cập nhật Location cho Return trong TransactionModel
+            if (normalizedActionType === 'Return') {
+                const request = localTransaction.request();
+                request.input('Location', sql.NVarChar(100), ReturnLocation);
+                qrCodeIds.forEach((id, i) => {
+                    request.input(`QRCodeID${i}`, sql.NVarChar(150), id);
+                });
+                await request.query(`
+                UPDATE QRCodeDetails
+                SET Location = @Location, Status = 'Available'
+                WHERE QRCodeID IN (${qrCodeIds.map((_, i) => `@QRCodeID${i}`).join(',')})
+            `);
             }
 
             if (!transaction) await localTransaction.commit();

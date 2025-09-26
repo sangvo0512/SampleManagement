@@ -207,6 +207,12 @@ const HistoryPage = () => {
             key: 'Reason',
             render: (text) => text || 'N/A',
         },
+        {
+            title: t("note"), // Thêm cột Note
+            dataIndex: 'Note',
+            key: 'Note',
+            render: (text) => text || 'N/A',
+        },
     ];
 
     return (

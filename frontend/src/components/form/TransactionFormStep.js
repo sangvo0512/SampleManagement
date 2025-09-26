@@ -27,6 +27,9 @@ const TransactionFormStep = ({
     const [modalVisible, setModalVisible] = useState(false);
     const [receiverModalVisible, setReceiverModalVisible] = useState(false); // Modal cho Receiver
     const [searchTerm, setSearchTerm] = useState('');
+    const [warehouses, setWarehouses] = useState([]);
+    const operationCodeID = Form.useWatch('OperationCodeID', form); // Theo dõi giá trị OperationCodeID
+    const showNote = [3, 1002, 1003].includes(operationCodeID); // Hiển thị Note nếu ID khớp
 
     // Fetch danh sách Borrower
     useEffect(() => {
@@ -46,7 +49,30 @@ const TransactionFormStep = ({
         };
         fetchBorrowers();
     }, [t]);
+    useEffect(() => {
+        const fetchWarehouses = async () => {
+            try {
+                const response = await fetch("/api/warehouses");
+                const result = await response.json();
 
+                // Nếu API trả về array trực tiếp
+                if (response.ok && Array.isArray(result)) {
+                    setWarehouses(result);
+                }
+                // Nếu sau này API có dạng object
+                else if (response.ok && result.success) {
+                    setWarehouses(result.data || []);
+                } else {
+                    throw new Error(result.message || t("failedToFetchWarehouses"));
+                }
+            } catch (error) {
+                console.error('Lỗi khi lấy danh sách Warehouses:', error);
+                message.error(t("failedToFetchWarehouses"));
+            }
+        };
+
+        fetchWarehouses();
+    }, [t]);
     useEffect(() => {
         form.resetFields();
         setBorrowerInfo(null);
@@ -192,7 +218,8 @@ const TransactionFormStep = ({
                 UserName: borrowerInfo?.UserName || values.UserName,
                 DepartmentName: borrowerInfo?.DepartmentName || values.DepartmentName,
                 ReceiverName: user.idNumber,
-                ToDepartmentName: userDepartmentName  // Thay ReceiverDeptID bằng ToDepartmentName
+                ToDepartmentName: userDepartmentName,
+                ReturnLocation: values.ReturnLocation
             } : {}),
             ...(actionType === "Transfer" ? {
                 UserName: borrowerInfo?.UserName || values.UserName,
@@ -302,7 +329,6 @@ const TransactionFormStep = ({
                     </>
                 );
             case "Return":
-                // Thay ReceiverDeptID thành ReceiverDeptName (ToDepartmentName)
                 return (
                     <>
                         <Form.Item
@@ -345,6 +371,22 @@ const TransactionFormStep = ({
                                 readOnly
                                 defaultValue={departments.find(d => d.DepartmentID === user.departmentId)?.DepartmentName}
                             />
+                        </Form.Item>
+                        <Form.Item
+                            label={t("returnLocation")}
+                            name="ReturnLocation"
+                            rules={[{ required: true, message: t("selectReturnLocation") }]}
+                        >
+                            <Select
+                                placeholder={t("selectReturnLocation")}
+                                allowClear
+                            >
+                                {warehouses.map(wh => (
+                                    <Option key={wh.WarehouseID} value={wh.WarehouseName}>
+                                        {wh.WarehouseName}
+                                    </Option>
+                                ))}
+                            </Select>
                         </Form.Item>
                         {borrowerError && (
                             <Typography.Text type="danger">{borrowerError}</Typography.Text>
@@ -462,6 +504,15 @@ const TransactionFormStep = ({
                                 ))}
                             </Select>
                         </Form.Item>
+                        {showNote && ( // Conditional rendering cho Note
+                            <Form.Item
+                                label={t("note")}
+                                name="Note"
+                                rules={[{ required: true, message: t("enterNote") }]}
+                            >
+                                <Input placeholder={t("enterNote")} />
+                            </Form.Item>
+                        )}
                     </>
                 );
             case "Reject":

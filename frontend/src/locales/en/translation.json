@@ -200,5 +200,9 @@
     "batchGeneratePartialError": "Some errors occurred while generating the batch: ",
     "failedToGenerateBatchQR": "Unable to generate batch QR codes",
     "batchQRModalTitle": "Select multiple QR codes",
-    "generateBatchQR": "Generate QR codes in batch"
+    "generateBatchQR": "Generate QR codes in batch",
+    "total_items": "Quantity",
+    "note_inventory": "Stock quantity / Total quantity",
+    "returnLocation": "Return Location",
+    "enterNote": "Enter note"
 }

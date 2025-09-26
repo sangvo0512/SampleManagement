@@ -291,9 +291,9 @@ const ScanCartStep = ({ qrList, setQrList, onNext }) => {
             title: t("location"),
             dataIndex: "location",
             key: "location",
-            render: (location) => (
-                <Tag color={location === null || location === t("unknown") ? "red" : "blue"}>
-                    {location === null || location === t("unknown") ? t("noLocation") : location}
+            render: (location, record) => (
+                <Tag color={record.qrStatus === "Borrowed" ? "default" : (location === null || location === t("unknown") ? "red" : "blue")}>
+                    {record.qrStatus === "Borrowed" ? "" : (location === null || location === t("unknown") ? t("noLocation") : location)}
                 </Tag>
             ),
         },

@@ -12,7 +12,9 @@ class TransactionController {
                 QRCodeDataList = [],
                 OperationCodeID,
                 ToUserName,
-                ToDepartmentName
+                ToDepartmentName,
+                ReturnLocation, // Thêm ReturnLocation
+                Note
             } = req.body;
 
             console.log('createTransaction req.body:', req.body);
@@ -48,6 +50,9 @@ class TransactionController {
             if (normalizedActionType === 'Reject' && !OperationCodeID) {
                 return res.status(400).json({ message: "Missing operation code." });
             }
+            if (normalizedActionType === 'Return' && !ReturnLocation) {
+                return res.status(400).json({ message: "Missing return location." });
+            }
 
             const pool = await poolPromise;
             for (const qr of QRCodeDataList) {
@@ -60,7 +65,7 @@ class TransactionController {
 
                 const result = await pool.request()
                     .input('QRCodeID', sql.NVarChar(150), QRCodeID)
-                    .query(`SELECT Status FROM QRCodeDetails WHERE QRCodeID = @QRCodeID`);
+                    .query(`SELECT Status, Location FROM QRCodeDetails WHERE QRCodeID = @QRCodeID`);
 
                 if (result.recordset.length === 0) {
                     return res.status(404).json({ message: `The QR ${QRCodeID} is not exist.` });
@@ -78,6 +83,9 @@ class TransactionController {
                 }
                 if (normalizedActionType === 'Reject' && status !== 'Available') {
                     return res.status(400).json({ message: `The QR ${QRCodeID} is not available for Reject (Status: ${status}).` });
+                }
+                if (normalizedActionType === 'Return' && status !== 'Borrowed') {
+                    return res.status(400).json({ message: `The QR ${QRCodeID} must be in "Borrowed" status to Return (Status: ${status}).` });
                 }
             }
 
@@ -97,13 +105,43 @@ class TransactionController {
             const transactionId = await TransactionModel.createTransaction({
                 ActionType: normalizedActionType,
                 UserName,
-                DepartmentName: DepartmentName || null, // Đảm bảo không undefined
+                DepartmentName: DepartmentName || null,
                 TransactionDate: new Date(),
                 items,
                 OperationCodeID,
                 ToUserName,
-                ToDepartmentName
+                ToDepartmentName,
+                ReturnLocation, // Truyền ReturnLocation cho TransactionModel
+                Note
             });
+
+            // Cập nhật Location trong QRCodeDetails cho Return
+            if (normalizedActionType === 'Return') {
+                const request = pool.request();
+                QRCodeDataList.forEach((qr, index) => {
+                    request.input(`QRCodeID${index}`, sql.NVarChar(150), qr.QRCodeID);
+                });
+                request.input('Location', sql.NVarChar(100), ReturnLocation);
+                const placeholders = QRCodeDataList.map((_, index) => `@QRCodeID${index}`).join(',');
+                await request.query(`
+                UPDATE QRCodeDetails
+                SET Location = @Location, Status = 'Available'
+                WHERE QRCodeID IN (${placeholders})
+            `);
+            }
+            // Cập nhật Set Location = NULL cho Export
+            if (normalizedActionType === 'Export') {
+                const request = pool.request();
+                QRCodeDataList.forEach((qr, index) => {
+                    request.input(`QRCodeID${index}`, sql.NVarChar(150), qr.QRCodeID);
+                });
+                const placeholders = QRCodeDataList.map((_, index) => `@QRCodeID${index}`).join(',');
+                await request.query(`
+        UPDATE QRCodeDetails
+        SET Location = NULL, Status = 'Exported'
+        WHERE QRCodeID IN (${placeholders})
+      `);
+            }
 
             return res.status(201).json({
                 message: `${normalizedActionType} successfully.`,
@@ -299,15 +337,15 @@ class TransactionController {
         let transaction;
         try {
             console.time('handleReturn');
-            const { QRCodeDataList, UserName, DepartmentName, ReceiverName, ReceiverDeptID, ToDepartmentName } = data;
-            console.log('handleReturn input:', { QRCodeDataList, UserName, DepartmentName, ReceiverName, ReceiverDeptID, ToDepartmentName });
+            const { QRCodeDataList, UserName, DepartmentName, ReceiverName, ReceiverDeptID, ToDepartmentName, ReturnLocation } = data;
+            console.log('handleReturn input:', { QRCodeDataList, UserName, DepartmentName, ReceiverName, ReceiverDeptID, ToDepartmentName, ReturnLocation });
 
             if (!QRCodeDataList || !Array.isArray(QRCodeDataList) || QRCodeDataList.length === 0) {
                 return { success: false, message: "Danh sách QRCodeID không hợp lệ.", status: 400 };
             }
 
-            if (!ReceiverName || !ReceiverDeptID || !ToDepartmentName) {
-                return { success: false, message: "Thiếu thông tin người nhận hoặc bộ phận nhận.", status: 400 };
+            if (!ReceiverName || !ReceiverDeptID || !ToDepartmentName || !ReturnLocation) {
+                return { success: false, message: "Thiếu thông tin người nhận/bộ phận nhận/Vị trí trả về.", status: 400 };
             }
 
             const pool = await poolPromise;
@@ -457,7 +495,23 @@ class TransactionController {
                             }, transaction);
                         }
                     }
+
                 }
+            }
+            // Mới: Cập nhật Location trong QRCodeDetails cho Return
+            if (ReturnLocation) {
+                const request = transaction.request();
+                QRCodeDataList.forEach((qr, index) => {
+                    request.input(`QRCodeID${index}`, sql.NVarChar(150), qr.QRCodeID);
+                });
+                request.input('Location', sql.NVarChar(100), ReturnLocation);
+                const placeholders = QRCodeDataList.map((_, index) => `@QRCodeID${index}`).join(',');
+                await request.query(`
+                        UPDATE QRCodeDetails
+                        SET Location = @Location, Status = 'Available'
+                        WHERE QRCodeID IN (${placeholders})
+                    `);
+                console.log(`Updated Location to ${ReturnLocation} for QR codes.`);
             }
 
             await transaction.commit();
@@ -749,7 +803,8 @@ class TransactionController {
                     pl.QRCodeID AS QRCode,
                     oc.ReasonDetail AS Reason,
                     pl.ToUserName,
-                    pl.ToDepartmentName
+                    pl.ToDepartmentName,
+                    pl.Note AS Note
                 FROM ProductLogs pl
                 LEFT JOIN OperationCodes oc ON pl.OperationCodeID = oc.ReasonID
             `;
@@ -760,8 +815,8 @@ class TransactionController {
                 request.input('UniqueKey', sql.NVarChar, `%${uniqueKey}%`);
             }
             if (qrCode) {
-                conditions.push(`pl.QRCodeID LIKE @QRCodeID`);
-                request.input('QRCodeID', sql.NVarChar, `%${qrCode}%`);
+                conditions.push(`pl.QRCodeID = @QRCodeID`);
+                request.input('QRCodeID', sql.NVarChar, qrCode);
             }
             if (startDate && endDate) {
                 const parsedStartDate = new Date(startDate);

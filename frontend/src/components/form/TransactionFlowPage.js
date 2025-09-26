@@ -62,6 +62,11 @@ const TransactionFlowPage = () => {
                 message.error(t("missingReceiverInfo"));
                 return;
             }
+            if (!formData.ReturnLocation) {
+                setLoading(false);
+                message.error(t("selectReturnLocation"));
+                return;
+            }
         }
         if (actionType === "Transfer") {
             if (!formData.ReceiverName || formData.ReceiverName.trim() === "") {
@@ -122,7 +127,8 @@ const TransactionFlowPage = () => {
                 DepartmentName: formData.DepartmentName,
                 ReceiverName: formData.ReceiverName || user.idNumber,
                 ReceiverDeptID: formData.ReceiverDeptID || user.departmentId,
-                ToDepartmentName: formData.ToDepartmentName
+                ToDepartmentName: formData.ToDepartmentName,
+                ReturnLocation: formData.ReturnLocation
             } : {}),
             ...(actionType === "Transfer" ? {
                 UserName: formData.UserName,
@@ -133,6 +139,7 @@ const TransactionFlowPage = () => {
             } : {}),
             ...(actionType === "Export" ? {
                 OperationCodeID: formData.OperationCodeID,
+                Note: formData.Note,
                 ToUserName: formData.ToUserName
             } : {}),
             ...(actionType === "Reject" ? {
@@ -191,7 +198,7 @@ const TransactionFlowPage = () => {
                 <SelectTransactionType
                     actionType={actionType}
                     setActionType={setActionType}
-                    qrStatuses={qrStatuses}          // ✅ truyền xuống
+                    qrStatuses={qrStatuses}
                     onNext={() => setCurrentStep(currentStep + 1)}
                     onBack={() => setCurrentStep(currentStep - 1)}
                 />

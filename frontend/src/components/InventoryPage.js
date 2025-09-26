@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Table, Button, Select, Modal, Input, message, Row, Col, Typography, Tag } from 'antd';
+import { Table, Button, Select, Modal, Input, message, Row, Col, Typography, Tag, Tooltip } from 'antd';
 import axios from 'axios';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
@@ -268,7 +268,7 @@ const InventoryPage = () => {
             <Title level={3}>{t('inventory')}</Title>
 
             <Row gutter={16} className="filter-row">
-                <Col xs={24} sm={12} md={8} lg={3} >
+                <Col span={2}>
                     <Select
                         placeholder={t('select')}
                         allowClear
@@ -283,33 +283,38 @@ const InventoryPage = () => {
                         ))}
                     </Select>
                 </Col>
-                <Col  >
+                <Col>
                     <Button type="primary" onClick={handleShowAll} block icon={<OrderedListOutlined />}>
                         {t('getAllSamples')}
                     </Button>
                 </Col>
-                <Col xs={24} sm={12} md={8} lg={3} >
+                <Col xs={24} sm={12} md={8} lg={3}>
                     <Input
                         ref={searchQrRef}
                         placeholder={t('scan_or_enter_qrcode_to_search')}
                         value={searchQrInput}
                         onChange={(e) => setSearchQrInput(e.target.value)}
                         onPressEnter={handleSearchQr}
-                        prefix={<ScanOutlined onClick={() => searchQrRef.current.focus()} />} // Click icon để focus Input
+                        prefix={<ScanOutlined onClick={() => searchQrRef.current.focus()} />}
                     />
                 </Col>
-                <Col  >
+                <Col>
                     <Button type="primary" onClick={showAddModal} block icon={<PlusCircleOutlined />}>
                         {t('warehousing')}
                     </Button>
                 </Col>
                 <Col>
-                    <Button type="primary" onClick={() => {
-                        setIsTransferModalVisible(true);
-                        setTransferQrCodes([]);
-                        setTransferLocation(null);
-                        setTransferQrInput('');
-                    }} block icon={<RetweetOutlined />}>
+                    <Button
+                        type="primary"
+                        onClick={() => {
+                            setIsTransferModalVisible(true);
+                            setTransferQrCodes([]);
+                            setTransferLocation(null);
+                            setTransferQrInput('');
+                        }}
+                        block
+                        icon={<RetweetOutlined />}
+                    >
                         {t('transferWarehouse')}
                     </Button>
                 </Col>
@@ -318,7 +323,7 @@ const InventoryPage = () => {
                         {t('exportAvailableAndBorrowed')}
                     </Button>
                 </Col>
-                <Col xs={24} sm={12} md={6} lg={4}>
+                <Col span={2}>
                     <Select
                         placeholder={t('select_search_column')}
                         value={searchColumn}
@@ -326,7 +331,7 @@ const InventoryPage = () => {
                         style={{ width: '100%' }}
                     >
                         <Select.Option value="ItemCode">{t('itemCode')}</Select.Option>
-                        <Select.Option value="ArticleNO.">{t('articleNo.')}</Select.Option>
+                        <Select.Option value="ArticleNO">{t('articleNo.')}</Select.Option>
                         <Select.Option value="Season">{t('season')}</Select.Option>
                         <Select.Option value="Round">{t('round')}</Select.Option>
                         <Select.Option value="Brand">{t('brand')}</Select.Option>
@@ -341,6 +346,13 @@ const InventoryPage = () => {
                         allowClear
                         enterButton={<SearchOutlined />}
                     />
+                </Col>
+                {/* Mới: Hiển thị tổng số lượng */}
+                <Col style={{ display: 'flex', alignItems: 'center' }}>
+                    <Tooltip title={t('note_inventory')}>
+                        <div className="total-items">{t('total_items')}: {filteredData.filter(item => item.Location).length}/{filteredData.length}</div>
+                    </Tooltip>
+
                 </Col>
             </Row>
 

@@ -46,7 +46,7 @@ const WarehouseController = {
             res.status(500).send("Internal Server Error");
         }
     },
-    // Mới: Lấy list mẫu theo Location
+    //Lấy list mẫu theo Location
     async getQRByLocation(req, res) {
         try {
             const { location } = req.query;
@@ -58,7 +58,7 @@ const WarehouseController = {
         }
     },
 
-    // Mới: Thêm mẫu vào kho
+    //Thêm mẫu vào kho
     async addToWarehouse(req, res) {
         try {
             const { location, qrCodes } = req.body;
@@ -86,7 +86,7 @@ const WarehouseController = {
             res.status(500).json({ error: err.message });
         }
     },
-    // Mới: Xuất Excel theo Location
+    //Xuất Excel theo Location
     async exportWarehouse(req, res) {
         try {
             const location = req.query.location || '';
@@ -95,7 +95,7 @@ const WarehouseController = {
                 return res.status(404).send("Không tìm thấy dữ liệu QR để xuất");
             }
 
-            // Chuẩn bị worksheet
+            // Sheet 1: Chi tiết QRCodeDetails
             const worksheet = xlsx.utils.json_to_sheet(qrCodes, {
                 header: [
                     "QRCodeID",
@@ -116,7 +116,7 @@ const WarehouseController = {
                 ],
             });
 
-            // Định dạng chiều rộng cột
+            // Định dạng chiều rộng cột cho sheet 1
             worksheet["!cols"] = [
                 { wch: 30 }, // QRCodeID
                 { wch: 10 }, // QRIndex
@@ -135,8 +135,21 @@ const WarehouseController = {
                 { wch: 10 }, // Quantity
             ];
 
+            // Sheet 2: Dữ liệu từ v_LocationQuantity
+            const locationQuantities = await WarehouseModel.getLocationQuantities(location);
+            const summarySheet = xlsx.utils.json_to_sheet(locationQuantities, {
+                header: ["UniqueKey", "Location", "Quantity", "Status"],
+            });
+            summarySheet["!cols"] = [
+                { wch: 30 }, // UniqueKey
+                { wch: 20 }, // Location
+                { wch: 10 }, // Quantity
+                { wch: 15 }, // Status
+            ];
+
             const workbook = xlsx.utils.book_new();
             xlsx.utils.book_append_sheet(workbook, worksheet, "QRCodeDetails");
+            xlsx.utils.book_append_sheet(workbook, summarySheet, "Location Quantities");
 
             // Xuất file Excel với encoding UTF-8
             const excelBuffer = xlsx.write(workbook, { bookType: "xlsx", type: "buffer" });
@@ -170,7 +183,7 @@ const WarehouseController = {
         }
     },
 
-    // Mới: Update Location cho một item
+    //Update Location cho một item
     async updateLocation(req, res) {
         try {
             const { qrCodeId, newLocation } = req.body;

@@ -63,7 +63,27 @@ class WarehouseModel {
             throw new Error(`Lỗi khi lấy QRCodeDetails: ${err.message}`);
         }
     }
+    // Mới: Lấy dữ liệu từ view v_LocationQuantity
+    static async getLocationQuantities(location = null) {
+        try {
+            const pool = await poolPromise;
+            let query = `
+            SELECT UniqueKey, Location, Quantity, Status
+            FROM [dbo].[v_LocationQuantity]
+        `;
+            const request = pool.request();
 
+            if (location) {
+                query += ` WHERE Location = @location`;
+                request.input("location", sql.NVarChar, location);
+            }
+
+            const result = await request.query(query);
+            return result.recordset;
+        } catch (err) {
+            throw new Error(`Lỗi khi lấy dữ liệu từ v_LocationQuantity: ${err.message}`);
+        }
+    }
     // Mới: Thêm mẫu vào kho (cập nhật Location và tăng Quantity)
     static async addToWarehouse(location, qrCodes) {
         const pool = await poolPromise;
@@ -156,7 +176,7 @@ class WarehouseModel {
 
     // Mới: Xuất Excel (lấy data tương tự getQRByLocation)
     static async getItemsForExport(location) {
-        return await this.getQRByLocation(location);  // Reuse hàm để lấy data
+        return await this.getQRByLocation(location);
     }
     // Mới: Update Location cho một QRCodeID
     static async updateLocation(qrCodeId, newLocation) {

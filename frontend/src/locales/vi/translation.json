@@ -200,5 +200,9 @@
     "batchGeneratePartialError": "Lỗi một phần khi generate batch: ",
     "failedToGenerateBatchQR": "Không thể generate QR hàng loạt",
     "batchQRModalTitle": "Chọn nhiều mã QR",
-    "generateBatchQR": "Tạo QR hàng loạt"
+    "generateBatchQR": "Tạo QR hàng loạt",
+    "total_items": "Số lượng",
+    "note_inventory": "Số lượng tồn kho / Tổng số lượng",
+    "returnLocation": "Vị trí trả về",
+    "enterNote": "Điền ghi chú"
 }
