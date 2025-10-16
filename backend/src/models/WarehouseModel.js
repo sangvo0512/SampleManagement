@@ -53,7 +53,7 @@ class WarehouseModel {
       FROM QRCodeDetails QD
       LEFT JOIN Samples S ON QD.UniqueKey = S.UniqueKey
       WHERE (@location IS NULL OR QD.Location = @location)
-    `;
+            `;
         try {
             const request = pool.request();
             request.input("location", sql.NVarChar, location || null);

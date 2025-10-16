@@ -131,10 +131,14 @@ const ScanCartStep = ({ qrList, setQrList, onNext }) => {
                 return false;
             }
 
-            const response = await fetch(`/api/transaction/qrcode/status?qrCodeId=${encodeURIComponent(qrCodeID)}`, {
-                method: "GET",
-                headers: { "Content-Type": "application/json" },
-            });
+            const response = await fetch(
+                `/api/transaction/qrcode/status?qrCodeId=${encodeURIComponent(qrCodeID)}&t=${Date.now()}`,
+                {
+                    method: "GET",
+                    headers: { "Content-Type": "application/json", "Cache-Control": "no-cache" },
+                }
+            );
+
 
             const result = await response.json();
             if (!response.ok || !result.success) {
